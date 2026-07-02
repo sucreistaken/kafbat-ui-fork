@@ -182,7 +182,9 @@ export const useTopicMessages = ({
     };
 
     abortFetchData();
-    fetchData();
+    // the rethrow in onerror rejects this promise; swallow it to avoid
+    // unhandled promise rejections (the error is already shown to the user)
+    fetchData().catch(() => {});
 
     return abortFetchData;
   }, [searchParams, abortFetchData]);
