@@ -1,0 +1,22 @@
+name: "Frontend: Main: Build and test"
+
+on:
+  push:
+    branches: [ "main" ]
+    paths:
+      - "contract/**"
+      - "contract-typespec/**"
+      - "frontend/**"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build-and-test:
+    uses: ./.github/workflows/frontend_tests.yml
+    secrets:
+      CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}

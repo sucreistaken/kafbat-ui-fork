@@ -1,0 +1,271 @@
+package io.kafbat.ui.service.audit;
+
+import com.google.common.annotations.VisibleForTesting;
+import io.kafbat.ui.config.ClustersProperties;
+import io.kafbat.ui.config.auth.AuthenticatedUser;
+import io.kafbat.ui.model.KafkaCluster;
+import io.kafbat.ui.model.rbac.AccessContext;
+import io.kafbat.ui.service.AdminClientService;
+import io.kafbat.ui.service.ClustersStorage;
+import io.kafbat.ui.service.MessagesService;
+import io.kafbat.ui.service.ReactiveAdminClient;
+import java.io.Closeable;
+import java.io.IOException;
+import java.time.Duration;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.Set;
+import java.util.concurrent.TimeUnit;
+import java.util.function.Supplier;
+import javax.annotation.Nullable;
+import lombok.extern.slf4j.Slf4j;
+import org.apache.kafka.clients.producer.KafkaProducer;
+import org.apache.kafka.clients.producer.ProducerConfig;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.core.AuthenticatedPrincipal;
+import org.springframework.security.core.context.SecurityContext;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.stereotype.Service;
+import reactor.core.publisher.Mono;
+import reactor.core.publisher.Signal;
+import reactor.util.retry.Retry;
+
+
+@Slf4j
+@Service
+public class AuditService implements Closeable {
+
+  private static final AuthenticatedUser UNKNOWN_USER = new AuthenticatedUser("Unknown", Set.of());
+  private static final Duration BLOCK_TIMEOUT = Duration.ofSeconds(35);
+  private static final Duration TOPIC_BLOCK_TIMEOUT = Duration.ofSeconds(5);
+  private static final Duration REACTIVE_TIMEOUT = Duration.ofSeconds(5);
+
+  public static final String DEFAULT_AUDIT_TOPIC_NAME = "__kui-audit-log";
+  private static final int DEFAULT_AUDIT_TOPIC_PARTITIONS = 1;
+  private static final Map<String, String> DEFAULT_AUDIT_TOPIC_CONFIG = Map.of(
+      "retention.ms", String.valueOf(TimeUnit.DAYS.toMillis(90)),
+      "cleanup.policy", "delete"
+  );
+  private static final Map<String, Object> AUDIT_PRODUCER_CONFIG = Map.of(
+      ProducerConfig.COMPRESSION_TYPE_CONFIG, "gzip"
+  );
+
+  private static final Logger AUDIT_LOGGER = LoggerFactory.getLogger("audit");
+
+  private final Map<String, AuditWriter> auditWriters;
+
+  @Autowired
+  public AuditService(AdminClientService adminClientService, ClustersStorage clustersStorage) {
+    Map<String, AuditWriter> auditWriters = new HashMap<>();
+    for (var cluster : clustersStorage.getKafkaClusters()) {
+      Supplier<ReactiveAdminClient> adminClientSupplier = () -> adminClientService.get(cluster)
+          .timeout(REACTIVE_TIMEOUT)
+          .retryWhen(Retry.backoff(3, Duration.ofSeconds(2))
+              .maxBackoff(Duration.ofSeconds(10))
+          )
+          .block(BLOCK_TIMEOUT);
+      createAuditWriter(cluster, adminClientSupplier,
+          () -> MessagesService.createProducer(cluster, AUDIT_PRODUCER_CONFIG))
+          .ifPresent(writer -> auditWriters.put(cluster.getName(), writer));
+    }
+    this.auditWriters = auditWriters;
+  }
+
+  @VisibleForTesting
+  AuditService(Map<String, AuditWriter> auditWriters) {
+    this.auditWriters = auditWriters;
+  }
+
+  @VisibleForTesting
+  static Optional<AuditWriter> createAuditWriter(KafkaCluster cluster,
+                                                 Supplier<ReactiveAdminClient> acSupplier,
+                                                 Supplier<KafkaProducer<byte[], byte[]>> producerFactory) {
+    var auditProps = cluster.getOriginalProperties().getAudit();
+    if (auditProps == null) {
+      return Optional.empty();
+    }
+    boolean topicAudit = Optional.ofNullable(auditProps.getTopicAuditEnabled()).orElse(false);
+    boolean consoleAudit = Optional.ofNullable(auditProps.getConsoleAuditEnabled()).orElse(false);
+    boolean alterLogOnly = Optional.ofNullable(auditProps.getLevel())
+        .map(lvl -> lvl == ClustersProperties.AuditProperties.LogLevel.ALTER_ONLY).orElse(true);
+    if (!topicAudit && !consoleAudit) {
+      return Optional.empty();
+    }
+    if (!topicAudit) {
+      log.info("Audit initialization finished for cluster '{}' (console only)", cluster.getName());
+      return Optional.of(consoleOnlyWriter(cluster, alterLogOnly));
+    }
+    String auditTopicName = Optional.ofNullable(auditProps.getTopic()).orElse(DEFAULT_AUDIT_TOPIC_NAME);
+    boolean topicAuditCanBeDone = createTopicIfNeeded(cluster, acSupplier, auditTopicName, auditProps);
+    if (!topicAuditCanBeDone) {
+      if (consoleAudit) {
+        log.info(
+            "Audit initialization finished for cluster '{}' (console only, topic audit init failed)",
+            cluster.getName()
+        );
+        return Optional.of(consoleOnlyWriter(cluster, alterLogOnly));
+      }
+      return Optional.empty();
+    }
+    log.info("Audit initialization finished for cluster '{}'", cluster.getName());
+    return Optional.of(
+        new AuditWriter(
+            cluster.getName(),
+            alterLogOnly,
+            auditTopicName,
+            producerFactory.get(),
+            consoleAudit ? AUDIT_LOGGER : null
+        )
+    );
+  }
+
+  private static AuditWriter consoleOnlyWriter(KafkaCluster cluster, boolean alterLogOnly) {
+    return new AuditWriter(cluster.getName(), alterLogOnly, null, null, AUDIT_LOGGER);
+  }
+
+  /**
+   * return true if topic created/existing and producing can be enabled.
+   */
+  @VisibleForTesting
+  static boolean createTopicIfNeeded(KafkaCluster cluster,
+                                     Supplier<ReactiveAdminClient> acSupplier,
+                                     String auditTopicName,
+                                     ClustersProperties.AuditProperties auditProps) {
+    boolean requireAuditTopic = Optional.ofNullable(auditProps.getRequireAuditTopic()).orElse(false);
+
+    ReactiveAdminClient ac;
+    try {
+      ac = acSupplier.get();
+    } catch (Exception e) {
+      return handleTopicInitException(requireAuditTopic,
+          "Error while connecting to the cluster to create the audit topic '%s'".formatted(auditTopicName), e,
+          cluster.getName());
+    }
+
+    try {
+      boolean topicExists = Objects.requireNonNull(ac.listTopics(true).block(TOPIC_BLOCK_TIMEOUT))
+          .contains(auditTopicName);
+
+      if (topicExists) {
+        return true;
+      }
+    } catch (Exception e) {
+      return handleTopicInitException(requireAuditTopic,
+          "Error while checking the existence of the audit topic '%s'".formatted(auditTopicName), e, cluster.getName());
+    }
+
+    try {
+      int topicPartitions =
+          Optional.ofNullable(auditProps.getAuditTopicsPartitions())
+              .orElse(DEFAULT_AUDIT_TOPIC_PARTITIONS);
+
+      Map<String, String> topicConfig = new HashMap<>(DEFAULT_AUDIT_TOPIC_CONFIG);
+      Optional.ofNullable(auditProps.getAuditTopicProperties())
+          .ifPresent(topicConfig::putAll);
+
+      log.info("Creating audit topic '{}' for cluster '{}'", auditTopicName, cluster.getName());
+      ac.createTopic(auditTopicName, topicPartitions, null, topicConfig).block(TOPIC_BLOCK_TIMEOUT);
+      log.info("Audit topic created for cluster '{}'", cluster.getName());
+      return true;
+    } catch (Exception e) {
+      return handleTopicInitException(requireAuditTopic,
+          "Error creating the audit topic '%s'".formatted(auditTopicName), e, cluster.getName());
+    }
+  }
+
+  private static boolean handleTopicInitException(
+      boolean requireAuditTopic,
+      String errorMsg,
+      Exception cause,
+      String cluster
+  ) {
+    if (requireAuditTopic) {
+      throw new RuntimeException(errorMsg, cause);
+    }
+
+    log.error("-----------------------------------------------------------------");
+    log.error("Error initializing Audit for cluster '{}'. Audit will be disabled. See error below: ", cluster);
+    log.error("{}", errorMsg, cause);
+    log.error("-----------------------------------------------------------------");
+
+    return false;
+  }
+
+  private Mono<AuthenticatedUser> extractUser(Signal<?> sig) {
+    //see ReactiveSecurityContextHolder for impl details
+    Object key = SecurityContext.class;
+
+    if (!sig.getContextView().hasKey(key)) {
+      return Mono.just(UNKNOWN_USER);
+    }
+
+    return sig.getContextView().<Mono<SecurityContext>>get(key)
+        .map(context -> context.getAuthentication().getPrincipal())
+        .map(AuditService::extractUser)
+        .switchIfEmpty(Mono.just(UNKNOWN_USER));
+  }
+
+  private static AuthenticatedUser extractUser(Object principal) {
+    if (principal instanceof UserDetails u) {
+      return new AuthenticatedUser(u.getUsername(), Set.of());
+    } else if (principal instanceof AuthenticatedPrincipal p) {
+      return new AuthenticatedUser(p.getName(), Set.of());
+    } else {
+      if (principal != null) {
+        log.trace("Principal type: [{}]", principal.getClass().getName());
+      }
+      return UNKNOWN_USER;
+    }
+  }
+
+  public boolean isAuditTopic(KafkaCluster cluster, String topic) {
+    var writer = auditWriters.get(cluster.getName());
+    return writer != null
+        && topic.equals(writer.targetTopic())
+        && writer.isTopicWritingEnabled();
+  }
+
+  public void audit(AccessContext acxt, Signal<?> sig) {
+    if (auditWriters.isEmpty()) {
+      return;
+    }
+    if (sig.isOnComplete()) {
+      extractUser(sig)
+          .doOnNext(u -> sendAuditRecord(acxt, u))
+          .subscribe();
+    } else if (sig.isOnError()) {
+      extractUser(sig)
+          .doOnNext(u -> sendAuditRecord(acxt, u, sig.getThrowable()))
+          .subscribe();
+    }
+  }
+
+  private void sendAuditRecord(AccessContext ctx, AuthenticatedUser user) {
+    sendAuditRecord(ctx, user, null);
+  }
+
+  private void sendAuditRecord(AccessContext ctx, AuthenticatedUser user, @Nullable Throwable th) {
+    try {
+      if (ctx.cluster() != null) {
+        var writer = auditWriters.get(ctx.cluster());
+        if (writer != null) {
+          writer.write(ctx, user, th);
+        }
+      } else {
+        // cluster-independent operation
+        AuditWriter.writeAppOperation(AUDIT_LOGGER, ctx, user, th);
+      }
+    } catch (Exception e) {
+      log.warn("Error sending audit record", e);
+    }
+  }
+
+  @Override
+  public void close() throws IOException {
+    auditWriters.values().forEach(AuditWriter::close);
+  }
+}

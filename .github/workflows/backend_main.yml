@@ -1,0 +1,32 @@
+name: "Backend: Main: Build and test"
+
+on:
+  push:
+    branches: [ "main" ]
+    paths:
+      - "build.gradle"
+      - "gradle.properties"
+      - "settings.gradle"
+      - "gradle/libs.versions.toml"
+
+      - "contract/**"
+      - "contract-typespec/**"
+      - "api/**"
+      - "serde-api/**"
+
+permissions:
+  contents: read
+  checks: write
+  pull-requests: write
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build-and-test:
+    uses: ./.github/workflows/backend_tests.yml
+    with:
+      event_name: ${{ github.event_name }}
+    secrets:
+      CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}

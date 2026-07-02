@@ -1,0 +1,93 @@
+name: "Docker publish"
+
+on:
+  workflow_call:
+    inputs:
+      version:
+        required: true
+        type: string
+      generic_tag:
+        required: true
+        type: string
+
+permissions:
+  packages: write
+  id-token: write # Required to authenticate with OIDC for AWS
+
+jobs:
+  deploy:
+    strategy:
+      fail-fast: false
+      matrix:
+        registry: [ 'docker.io', 'ghcr.io', 'ecr' ]
+
+    runs-on: ubuntu-latest
+    steps:
+
+      - name: Download docker image
+        uses: actions/download-artifact@cc203385981b70ca67e1cc392babf9cc229d5806 # https://github.com/actions/download-artifact/releases/tag/v4
+        with:
+          name: image
+          path: /tmp
+
+      # setup containerd to preserve provenance attestations :https://docs.docker.com/build/attestations/#creating-attestations
+      - name: Setup docker with containerd
+        uses: docker/setup-docker-action@efe9e3891a4f7307e689f2100b33a155b900a608 # https://github.com/docker/setup-docker-action/releases/tag/v4.6.0
+        with:
+          daemon-config: |
+            {
+              "features": {
+                "containerd-snapshotter": true
+              }
+            }
+
+      - name: Load docker image into daemon
+        run: |
+          docker load --input /tmp/image.tar
+
+      - name: Login to docker.io
+        if: matrix.registry == 'docker.io'
+        uses: docker/login-action@74a5d142397b4f367a81961eba4e8cd7edddf772 # https://github.com/docker/login-action/releases/tag/v3.6.0
+        with:
+          registry: ${{ matrix.registry }}
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Login to ghcr.io
+        if: matrix.registry == 'ghcr.io'
+        uses: docker/login-action@74a5d142397b4f367a81961eba4e8cd7edddf772 # https://github.com/docker/login-action/releases/tag/v3.6.0
+        with:
+          registry: ${{ matrix.registry }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Configure AWS credentials
+        if: matrix.registry == 'ecr'
+        uses: aws-actions/configure-aws-credentials@e3dd6a429d7300a6a4c196c26e071d42e0343502  # https://github.com/aws-actions/configure-aws-credentials/releases/tag/v4
+        with:
+          aws-region: us-east-1 # This region only for public ECR
+          role-to-assume: ${{ secrets.AWS_ROLE }}
+
+      - name: Login to public ECR
+        if: matrix.registry == 'ecr'
+        id: login-ecr-public
+        uses: aws-actions/amazon-ecr-login@9238dd443b7a5941caf19ffbe68be34d4dbd61df # https://github.com/aws-actions/amazon-ecr-login/releases/tag/v2.0.1
+        with:
+          registry-type: public
+
+      - name: Set container registry env vars
+        run: |
+          if [ "${{ matrix.registry }}" == "ecr" ]; then
+            echo "REGISTRY=${{ vars.ECR_REGISTRY }}" >> $GITHUB_ENV
+            echo "REPOSITORY=$(basename ${{ github.repository }})" >> $GITHUB_ENV
+          else
+            echo "REGISTRY=${{ matrix.registry }}" >> $GITHUB_ENV
+            echo "REPOSITORY=${{ github.repository }}" >> $GITHUB_ENV
+          fi
+
+      - name: Push images to ${{ matrix.registry }}
+        run: |
+          docker tag kafka-ui:temp ${{ env.REGISTRY }}/${{ env.REPOSITORY }}:${{ inputs.generic_tag }}
+          docker tag kafka-ui:temp ${{ env.REGISTRY }}/${{ env.REPOSITORY }}:${{ inputs.version }}
+          docker push ${{ env.REGISTRY }}/${{ env.REPOSITORY }}:${{ inputs.generic_tag }}
+          docker push ${{ env.REGISTRY }}/${{ env.REPOSITORY }}:${{ inputs.version }}
