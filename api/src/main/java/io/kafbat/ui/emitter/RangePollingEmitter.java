@@ -54,6 +54,7 @@ abstract class RangePollingEmitter extends AbstractEmitter {
   public void accept(FluxSink<TopicMessageEventDTO> sink) {
     log.debug("Starting polling for {}", consumerPosition);
     pollingStartedAt = Instant.now();
+    scannedRecords = 0;
     try (EnhancedConsumer consumer = consumerSupplier.get()) {
       sendPhase(sink, "Consumer created");
       var seekOperations = SeekOperations.create(consumer, consumerPosition);
@@ -95,8 +96,10 @@ abstract class RangePollingEmitter extends AbstractEmitter {
 
     List<ConsumerRecord<Bytes, Bytes>> result = new ArrayList<>();
     Set<TopicPartition> paused = new HashSet<>();
-    while (!sink.isCancelled() && paused.size() < range.size()) {
+    while (!sink.isCancelled() && paused.size() < range.size() && !isScanBudgetExceeded()) {
       var polledRecords = consumer.pollEnhanced(getPollingSettings().getPollTimeout());
+      // budget intentionally counts all polled records (including out-of-range overshoot):
+      // it caps broker-side work, not user-visible progress
       scannedRecords += polledRecords.count();
       int sizeBeforeFiltering = result.size();
       range.forEach((tp, fromTo) -> {

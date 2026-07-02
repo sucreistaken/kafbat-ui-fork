@@ -25,11 +25,12 @@ public class PollingSettings {
         ? Duration.ofMillis(pollingProps.getPollTimeoutMs())
         : DEFAULT_POLL_TIMEOUT;
 
-    var responseTimeout = pollingProps.getResponseTimeoutMs() != null
+    // non-positive values are treated as misconfiguration and fall back to defaults
+    var responseTimeout = pollingProps.getResponseTimeoutMs() != null && pollingProps.getResponseTimeoutMs() > 0
         ? Duration.ofMillis(pollingProps.getResponseTimeoutMs())
         : DEFAULT_RESPONSE_TIMEOUT;
 
-    var maxScannedRecords = pollingProps.getMaxScannedRecords() != null
+    var maxScannedRecords = pollingProps.getMaxScannedRecords() != null && pollingProps.getMaxScannedRecords() > 0
         ? pollingProps.getMaxScannedRecords()
         : DEFAULT_MAX_SCANNED_RECORDS;
 
