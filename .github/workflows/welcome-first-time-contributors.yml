@@ -1,0 +1,39 @@
+name: Welcome first time contributors
+
+on:
+  pull_request_target:
+    types:
+      - opened
+  issues:
+    types:
+      - opened
+permissions:
+  issues: write
+  pull-requests: write
+jobs:
+  welcome:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/first-interaction@3c71ce730280171fd1cfb57c00c774f8998586f7 # https://github.com/actions/first-interaction/releases/tag/v1
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          issue-message: |
+            Hi ${{ github.actor }}! 👋
+
+            Welcome, and thank you for opening your first issue in the repo!
+
+            Please wait for triaging by our maintainers.
+
+            As development is carried out in our spare time, you can support us by sponsoring our activities or even funding the development of specific issues.
+            [Sponsorship link](https://github.com/kafbat)
+
+            If you plan to raise a PR for this issue, please take a look at our [contributing guide](https://ui.docs.kafbat.io/development/contributing).
+
+          pr-message: |
+            Hi ${{ github.actor }}! 👋
+
+            Welcome, and thank you for opening your first PR in the repo!
+
+            Please wait for triaging by our maintainers.
+
+            Please take a look at our [contributing guide](https://ui.docs.kafbat.io/development/contributing).
