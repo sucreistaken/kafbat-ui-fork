@@ -38,6 +38,7 @@ import SlidingSidebar from 'components/common/SlidingSidebar';
 import useBoolean from 'lib/hooks/useBoolean';
 import { useProduceMessage } from 'lib/hooks/useProduceMessage';
 import ResourcePageHeading from 'components/common/ResourcePageHeading/ResourcePageHeading';
+import { Button } from 'components/common/Button/Button';
 import { TopicActionsProvider } from 'components/contexts/TopicActionsContext';
 import ErrorPage from 'components/ErrorPage/ErrorPage';
 
@@ -117,6 +118,19 @@ const Topic: React.FC = () => {
         >
           Produce Message
         </ActionButton>
+        <Button
+          buttonSize="M"
+          buttonType="secondary"
+          onClick={() =>
+            window.open(
+              `/viz/?topic=${encodeURIComponent(topicName)}`,
+              '_blank',
+              'noopener'
+            )
+          }
+        >
+          Grafik
+        </Button>
         <Dropdown disabled={isReadOnly || data?.internal}>
           <ActionDropdownItem
             onClick={() => navigate(clusterTopicEditRelativePath)}
