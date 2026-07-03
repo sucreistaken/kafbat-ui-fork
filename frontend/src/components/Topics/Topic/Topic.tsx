@@ -129,7 +129,7 @@ const Topic: React.FC = () => {
             )
           }
         >
-          Grafik
+          Charts
         </Button>
         <Dropdown disabled={isReadOnly || data?.internal}>
           <ActionDropdownItem
