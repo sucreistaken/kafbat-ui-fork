@@ -18,6 +18,7 @@ import io.kafbat.ui.model.SeekTypeDTO;
 import io.kafbat.ui.model.SerdeUsageDTO;
 import io.kafbat.ui.model.SmartFilterTestExecutionDTO;
 import io.kafbat.ui.model.SmartFilterTestExecutionResultDTO;
+import io.kafbat.ui.model.StringFilterTargetDTO;
 import io.kafbat.ui.model.TopicMessageEventDTO;
 import io.kafbat.ui.model.TopicSerdeSuggestionDTO;
 import io.kafbat.ui.model.rbac.AccessContext;
@@ -98,6 +99,7 @@ public class MessagesController extends AbstractController implements MessagesAp
                                                                              List<Integer> partitions,
                                                                              Integer limit,
                                                                              String stringFilter,
+                                                                             StringFilterTargetDTO stringFilterTarget,
                                                                              String smartFilterId,
                                                                              Long offset,
                                                                              Long timestamp,
@@ -127,6 +129,7 @@ public class MessagesController extends AbstractController implements MessagesAp
           topicName,
           ConsumerPosition.create(pollingMode, checkNotNull(topicName), partitions, timestamp, offset),
           stringFilter,
+          stringFilterTarget,
           smartFilterId,
           limit,
           keySerde,

@@ -145,6 +145,7 @@ export const MessagesFilterKeys = {
   limit: 'limit',
   offset: 'offset',
   stringFilter: 'stringFilter',
+  stringFilterTarget: 'stringFilterTarget',
   partitions: 'partitions',
   smartFilterId: 'smartFilterId',
   activeFilterId: 'activeFilterId',

@@ -3,6 +3,7 @@ import 'react-datepicker/dist/react-datepicker.css';
 import {
   PollingMode,
   SerdeUsage,
+  StringFilterTarget,
   TopicMessageConsuming,
 } from 'generated-sources';
 import React, { ChangeEvent, useMemo, useState } from 'react';
@@ -41,6 +42,13 @@ export interface FiltersProps {
   abortFetchData: () => void;
 }
 
+const searchTargetOptions = [
+  { label: 'All', value: StringFilterTarget.ALL },
+  { label: 'Key', value: StringFilterTarget.KEY },
+  { label: 'Value', value: StringFilterTarget.VALUE },
+  { label: 'Headers', value: StringFilterTarget.HEADERS },
+];
+
 const Filters: React.FC<FiltersProps> = ({
   consumptionStats,
   isFetching,
@@ -62,6 +70,8 @@ const Filters: React.FC<FiltersProps> = ({
     setOffsetValue,
     search,
     setSearch,
+    searchTarget,
+    setSearchTarget,
     partitions: p,
     setPartition,
     smartFilter,
@@ -229,7 +239,18 @@ const Filters: React.FC<FiltersProps> = ({
           </Button>
         </FlexBox>
 
-        <Search placeholder="Search" value={search} onChange={setSearch} />
+        <FlexBox gap="8px" alignItems="center">
+          <Select
+            id="selectStringFilterTarget"
+            aria-labelledby="selectStringFilterTarget"
+            onChange={setSearchTarget}
+            options={searchTargetOptions}
+            value={searchTarget}
+            selectSize="M"
+            minWidth="110px"
+          />
+          <Search placeholder="Search" value={search} onChange={setSearch} />
+        </FlexBox>
       </FlexBox>
       <FlexBox
         gap="10px"

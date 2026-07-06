@@ -19,6 +19,7 @@ import io.kafbat.ui.model.KafkaCluster;
 import io.kafbat.ui.model.PollingModeDTO;
 import io.kafbat.ui.model.SmartFilterTestExecutionDTO;
 import io.kafbat.ui.model.SmartFilterTestExecutionResultDTO;
+import io.kafbat.ui.model.StringFilterTargetDTO;
 import io.kafbat.ui.model.TopicMessageDTO;
 import io.kafbat.ui.model.TopicMessageEventDTO;
 import io.kafbat.ui.serdes.ConsumerRecordDeserializer;
@@ -221,6 +222,7 @@ public class MessagesService {
                                                  String topic,
                                                  ConsumerPosition consumerPosition,
                                                  @Nullable String containsStringFilter,
+                                                 @Nullable StringFilterTargetDTO stringFilterTarget,
                                                  @Nullable String filterId,
                                                  @Nullable Integer limit,
                                                  @Nullable String keySerde,
@@ -230,8 +232,29 @@ public class MessagesService {
         topic,
         deserializationService.deserializerFor(cluster, topic, keySerde, valueSerde),
         consumerPosition,
-        getMsgFilter(containsStringFilter, filterId),
+        getMsgFilter(containsStringFilter, stringFilterTarget, filterId),
         fixPageSize(limit)
+    );
+  }
+
+  public Flux<TopicMessageEventDTO> loadMessages(KafkaCluster cluster,
+                                                 String topic,
+                                                 ConsumerPosition consumerPosition,
+                                                 @Nullable String containsStringFilter,
+                                                 @Nullable String filterId,
+                                                 @Nullable Integer limit,
+                                                 @Nullable String keySerde,
+                                                 @Nullable String valueSerde) {
+    return loadMessages(
+        cluster,
+        topic,
+        consumerPosition,
+        containsStringFilter,
+        StringFilterTargetDTO.ALL,
+        filterId,
+        limit,
+        keySerde,
+        valueSerde
     );
   }
 
@@ -299,10 +322,11 @@ public class MessagesService {
   }
 
   private Predicate<TopicMessageDTO> getMsgFilter(@Nullable String containsStrFilter,
+                                                  @Nullable StringFilterTargetDTO stringFilterTarget,
                                                   @Nullable String smartFilterId) {
     Predicate<TopicMessageDTO> messageFilter = MessageFilters.noop();
     if (containsStrFilter != null) {
-      messageFilter = messageFilter.and(MessageFilters.containsStringFilter(containsStrFilter));
+      messageFilter = messageFilter.and(MessageFilters.containsStringFilter(containsStrFilter, stringFilterTarget));
     }
     if (smartFilterId != null) {
       var registered = registeredFilters.getIfPresent(smartFilterId);

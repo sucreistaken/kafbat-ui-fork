@@ -78,6 +78,7 @@ interface MessagesApi {
     @query partitions?: int32[],
     @query limit?: int32,
     @query stringFilter?: string,
+    @query stringFilterTarget?: StringFilterTarget,
     @query smartFilterId?: string,
     @query offset?: int64,
     @query timestamp?: int64,
@@ -190,6 +191,13 @@ enum PollingMode {
   LATEST,
   EARLIEST,
   TAILING,
+}
+
+enum StringFilterTarget {
+  ALL,
+  KEY,
+  VALUE,
+  HEADERS,
 }
 
 enum MessageFilterType {

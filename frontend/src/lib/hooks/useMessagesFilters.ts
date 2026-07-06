@@ -1,5 +1,5 @@
 import { useSearchParams } from 'react-router-dom';
-import { PollingMode } from 'generated-sources';
+import { PollingMode, StringFilterTarget } from 'generated-sources';
 import { useEffect } from 'react';
 import { Option } from 'react-multi-select-component';
 import { MessagesFilterKeys } from 'lib/constants';
@@ -17,6 +17,7 @@ import useAppParams from './useAppParams';
 const PER_PAGE = 100;
 
 const defaultModeValue = ModeOptions[0].value;
+const defaultSearchTarget = StringFilterTarget.ALL;
 
 export function useRefreshData(initSearchParams?: URLSearchParams) {
   const [, setSearchParams] = useSearchParams(initSearchParams);
@@ -108,6 +109,11 @@ export function useMessagesFilters(topicName: string) {
 
   const search = searchParams.get(MessagesFilterKeys.stringFilter) || '';
 
+  const searchTarget =
+    (searchParams.get(
+      MessagesFilterKeys.stringFilterTarget
+    ) as StringFilterTarget | null) || defaultSearchTarget;
+
   const partitions = (searchParams.get(MessagesFilterKeys.partitions) || '')
     .split(',')
     .filter((v) => v);
@@ -190,6 +196,19 @@ export function useMessagesFilters(topicName: string) {
     });
   };
 
+  const setSearchTarget = (value: StringFilterTarget) => {
+    setSearchParams((params) => {
+      if (value === defaultSearchTarget) {
+        removeMessagesFiltersField(MessagesFilterKeys.stringFilterTarget);
+        params.delete(MessagesFilterKeys.stringFilterTarget);
+      } else {
+        setMessagesFiltersField(MessagesFilterKeys.stringFilterTarget, value);
+        params.set(MessagesFilterKeys.stringFilterTarget, value);
+      }
+      return params;
+    });
+  };
+
   const setPartition = (values: Option[]) => {
     setSearchParams((params) => {
       params.delete(MessagesFilterKeys.partitions);
@@ -261,6 +280,8 @@ export function useMessagesFilters(topicName: string) {
     setOffsetValue,
     search,
     setSearch,
+    searchTarget,
+    setSearchTarget,
     partitions,
     setPartition,
     smartFilter,

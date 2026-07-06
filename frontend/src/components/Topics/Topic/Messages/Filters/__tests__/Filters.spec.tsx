@@ -75,6 +75,7 @@ describe('Filters component', () => {
   const getSeekTypeSelect = () => screen.getAllByRole('listbox')[0];
   const getKeySerdeDropdown = () => screen.getAllByRole('listbox')[1];
   const getValueSerdeDropdown = () => screen.getAllByRole('listbox')[2];
+  const getSearchTargetDropdown = () => screen.getAllByRole('listbox')[3];
 
   it('shows refresh button', () => {
     renderComponent();
@@ -113,6 +114,17 @@ describe('Filters component', () => {
       expect(searchInput).toHaveValue('');
       await userEvent.type(searchInput, inputValue);
       expect(searchInput).toHaveValue(inputValue);
+    });
+
+    it('search target defaults to all and is selectable', async () => {
+      const searchTargetSelect = getSearchTargetDropdown();
+
+      expect(searchTargetSelect).toHaveTextContent('All');
+
+      await userEvent.click(searchTargetSelect);
+      await userEvent.click(screen.getByText('Headers'));
+
+      expect(searchTargetSelect).toHaveTextContent('Headers');
     });
 
     it('offset input from offset option', async () => {
@@ -223,6 +235,15 @@ describe('Filters component', () => {
       const searchFilter = 'searchFilter';
       renderComponent({}, { [MessagesFilterKeys.stringFilter]: searchFilter });
       expect(screen.getByPlaceholderText('Search')).toHaveValue(searchFilter);
+    });
+
+    it('should check the search target value', () => {
+      renderComponent(
+        {},
+        { [MessagesFilterKeys.stringFilterTarget]: 'VALUE' }
+      );
+
+      expect(getSearchTargetDropdown()).toHaveTextContent('Value');
     });
 
     describe('Serde dropdown', () => {

@@ -26,6 +26,7 @@ import dev.cel.runtime.CelEvaluationException;
 import dev.cel.runtime.CelRuntime;
 import dev.cel.runtime.CelRuntimeFactory;
 import io.kafbat.ui.exception.CelException;
+import io.kafbat.ui.model.StringFilterTargetDTO;
 import io.kafbat.ui.model.TopicMessageDTO;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -58,13 +59,18 @@ public class MessageFilters {
   }
 
   public static Predicate<TopicMessageDTO> containsStringFilter(String string) {
+    return containsStringFilter(string, StringFilterTargetDTO.ALL);
+  }
+
+  public static Predicate<TopicMessageDTO> containsStringFilter(String string, @Nullable StringFilterTargetDTO target) {
     @Nullable String escapedUpper = escapeNonAscii(string);
     @Nullable String escapedLower = escapedUpper != null
         ? HEX_IN_UNICODE_ESCAPE.matcher(escapedUpper).replaceAll(m -> m.group().toLowerCase())
         : null;
-    return msg -> msgContains(msg, string)
-        || (escapedUpper != null && msgContains(msg, escapedUpper))
-        || (escapedLower != null && msgContains(msg, escapedLower));
+    var effectiveTarget = target == null ? StringFilterTargetDTO.ALL : target;
+    return msg -> msgContains(msg, string, effectiveTarget)
+        || (escapedUpper != null && msgContains(msg, escapedUpper, effectiveTarget))
+        || (escapedLower != null && msgContains(msg, escapedLower, effectiveTarget));
   }
 
   @Nullable
@@ -73,10 +79,15 @@ public class MessageFilters {
     return escaped.equals(input) ? null : escaped;
   }
 
-  private static boolean msgContains(TopicMessageDTO msg, String search) {
-    return CS.contains(msg.getKey(), search)
-        || CS.contains(msg.getValue(), search)
-        || headersContains(msg, search);
+  private static boolean msgContains(TopicMessageDTO msg, String search, StringFilterTargetDTO target) {
+    return switch (target) {
+      case ALL -> CS.contains(msg.getKey(), search)
+          || CS.contains(msg.getValue(), search)
+          || headersContains(msg, search);
+      case KEY -> CS.contains(msg.getKey(), search);
+      case VALUE -> CS.contains(msg.getValue(), search);
+      case HEADERS -> headersContains(msg, search);
+    };
   }
 
   private static boolean headersContains(TopicMessageDTO msg, String searchString) {

@@ -8,6 +8,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.kafbat.ui.exception.CelException;
+import io.kafbat.ui.model.StringFilterTargetDTO;
 import io.kafbat.ui.model.TopicMessageDTO;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
@@ -49,6 +50,48 @@ class MessageFiltersTest {
       assertTrue(
           filter.test(msg().key("dfg").value("does-not-contain").headers(Map.of("x1", "some abC")))
       );
+    }
+
+    @Test
+    void allTargetMatchesKeyValueAndHeaders() {
+      var allFilter = containsStringFilter("needle", StringFilterTargetDTO.ALL);
+
+      assertTrue(allFilter.test(msg().key("needle-key").value("other")));
+      assertTrue(allFilter.test(msg().key("other").value("needle-value")));
+      assertTrue(allFilter.test(msg().key("other").value("other").headers(Map.of("x-needle", "value"))));
+      assertTrue(allFilter.test(msg().key("other").value("other").headers(Map.of("x", "needle-value"))));
+    }
+
+    @Test
+    void keyTargetMatchesOnlyKey() {
+      var keyFilter = containsStringFilter("needle", StringFilterTargetDTO.KEY);
+
+      assertTrue(keyFilter.test(msg().key("needle-key").value("other").headers(Map.of("x", "other"))));
+      assertFalse(keyFilter.test(msg().key("other").value("needle-value").headers(Map.of("x", "needle-header"))));
+    }
+
+    @Test
+    void valueTargetMatchesOnlyValue() {
+      var valueFilter = containsStringFilter("needle", StringFilterTargetDTO.VALUE);
+
+      assertTrue(valueFilter.test(msg().key("other").value("needle-value").headers(Map.of("x", "other"))));
+      assertFalse(valueFilter.test(msg().key("needle-key").value("other").headers(Map.of("x", "needle-header"))));
+    }
+
+    @Test
+    void headersTargetMatchesOnlyHeaderNamesAndValues() {
+      var headersFilter = containsStringFilter("needle", StringFilterTargetDTO.HEADERS);
+
+      assertTrue(headersFilter.test(msg().key("other").value("other").headers(Map.of("x-needle", "value"))));
+      assertTrue(headersFilter.test(msg().key("other").value("other").headers(Map.of("x", "needle-value"))));
+      assertFalse(headersFilter.test(msg().key("needle-key").value("needle-value")));
+    }
+
+    @Test
+    void targetFiltersAreNullSafe() {
+      assertFalse(containsStringFilter("needle", StringFilterTargetDTO.KEY).test(msg().key(null).value(null)));
+      assertFalse(containsStringFilter("needle", StringFilterTargetDTO.VALUE).test(msg().key(null).value(null)));
+      assertFalse(containsStringFilter("needle", StringFilterTargetDTO.HEADERS).test(msg().key(null).value(null)));
     }
 
     @Test

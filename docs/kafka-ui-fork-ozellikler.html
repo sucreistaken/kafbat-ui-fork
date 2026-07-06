@@ -1,0 +1,416 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<title>Kafka UI Fork: Eklenen Özellikler</title>
+<style>
+  :root { color-scheme: light; }
+  * { box-sizing: border-box; }
+  html { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  body {
+    font-family: -apple-system, "Segoe UI", system-ui, sans-serif;
+    color: #16150f; line-height: 1.5; font-size: 13.5px;
+    margin: 0; padding: 0;
+  }
+  .page { padding: 40px 48px; max-width: 900px; margin: 0 auto; }
+  h1 { font-size: 25px; margin: 0 0 4px; letter-spacing: -0.01em; }
+  h2 { font-size: 19px; margin: 34px 0 10px; padding-top: 6px; border-top: 2px solid #e7e5da; }
+  h3 { font-size: 15px; margin: 20px 0 6px; }
+  h4 { font-size: 13.5px; margin: 14px 0 4px; color: #52514e; }
+  p { margin: 8px 0; }
+  .lede { color: #52514e; font-size: 14px; }
+  .stamp { color: #898781; font-size: 12px; margin: 6px 0 0; }
+  ul { margin: 8px 0; padding-left: 20px; }
+  li { margin: 3px 0; }
+  code { background: #f2f1ea; border-radius: 4px; padding: 1px 5px; font-size: 12px;
+         font-family: ui-monospace, "SF Mono", Menlo, monospace; }
+  pre { background: #f7f6f0; border: 1px solid #e7e5da; border-radius: 8px;
+        padding: 12px 14px; overflow-x: auto; font-size: 12px;
+        font-family: ui-monospace, "SF Mono", Menlo, monospace; }
+  table { border-collapse: collapse; width: 100%; margin: 10px 0; font-size: 12.5px; }
+  th, td { text-align: left; vertical-align: top; padding: 7px 10px; border-bottom: 1px solid #e7e5da; }
+  th { background: #f2f1ea; font-weight: 650; }
+  figure { margin: 14px 0 6px; }
+  figure img { width: 100%; border: 1px solid #e1e0d9; border-radius: 8px; display: block; }
+  figcaption { font-size: 11.5px; color: #898781; font-style: italic; margin-top: 5px; }
+  .note { background: #f7f6f0; border-left: 3px solid #c3c2b7; padding: 8px 12px;
+          border-radius: 0 6px 6px 0; margin: 12px 0; font-size: 12.5px; }
+  .new { display: inline-block; background: #e3f0dd; color: #2c5d1f; font-size: 10px;
+         font-weight: 700; padding: 1px 6px; border-radius: 20px; vertical-align: middle;
+         margin-left: 6px; letter-spacing: 0.03em; }
+  .section { page-break-inside: avoid; }
+  @media print {
+    .page { padding: 0; max-width: none; }
+    h2 { page-break-after: avoid; }
+    figure, table, pre { page-break-inside: avoid; }
+    .break { page-break-before: always; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <h1>Kafka UI: Genel Kullanım ve Eklediğimiz Özellikler</h1>
+  <p class="lede">Kafbat UI (açık kaynak, Apache-2.0) tabanlı Kafka arayüzümüz: uygulama ne
+  işe yarar, nasıl kullanılır ve fork ile neler ekledik.</p>
+  <p class="stamp">03.07.2026 &nbsp;|&nbsp; 20 milyon mesajlık gerçek test ortamında canlı doğrulandı</p>
+
+  <h3>Bu doküman</h3>
+  <p>Üç bölümden oluşur. Önce uygulamanın kendisi: Kafka UI nedir, günlük işte hangi ekran ne için
+  kullanılır. Sonra kısa bir "perde arkası": araç işleri nasıl hallediyor. En sonda fork ile
+  eklediğimiz üç özellik. Eklenenlerin özeti:</p>
+  <table>
+    <tr><th style="width:170px">Özellik</th><th>Ne işe yarıyor</th></tr>
+    <tr><td>1. Takılmayan arama</td><td>Orijinal araçta sonuçsuz mesaj araması, topic'in
+      tamamını tarayıp dakikalarca kilitleniyordu. Artık arama bir "tarama bütçesi" ile saniyeler
+      içinde duruyor, istenirse kaldığı yerden devam ediyor.</td></tr>
+    <tr><td>2. Grafik butonu</td><td>Topic sayfasındaki tek bir butonla, mesajların içindeki JSON
+      alanlarından anında grafik çizen bir araç açılıyor (dağılım, zaman serisi, toplam, ortalama).
+      Örnekleme, temsili örnekleme ve tüm veriyi kesin sayma modlarıyla. Piyasadaki ücretsiz
+      araçların hiçbirinde bu yok.</td></tr>
+    <tr><td>3. Tek adres, tek komut</td><td>Her şey tek bir <code>docker compose up -d</code> ile
+      ayağa kalkıyor ve tek porttan (80) sunuluyor: ana arayüz <code>/</code>, grafik aracı
+      <code>/viz/</code>.</td></tr>
+  </table>
+
+  <h2>Uygulama nedir, genel olarak nasıl kullanılır?</h2>
+  <p>Kafka UI, Kafka'yı komut satırı kullanmadan tarayıcıdan izlemeye ve yönetmeye yarayan bir web
+  arayüzüdür. Kafka'nın kendi ekranı yoktur; içinde ne aktığını görmek normalde terminal komutları
+  gerektirir. Bu araç o ihtiyacı tek adresten karşılar: topic'lere bakmak, mesajların içeriğini
+  okumak, test mesajı göndermek, tüketicilerin nerede kaldığını izlemek.</p>
+  <p>Sol menü dört ana bölümden oluşur: <b>Dashboard</b> (bağlı cluster'ların listesi ve sağlık
+  özeti), <b>Brokers</b> (sunucu sağlığı), <b>Topics</b> (mesaj kanalları, asıl çalışma alanı) ve
+  <b>Consumers</b> (tüketici grupları ve lag takibi).</p>
+
+  <h3>Topics: mesaj kanallarının listesi</h3>
+  <p>Günlük kullanımın başladığı yer. Tüm topic'ler partition sayısı, mesaj adedi ve disk boyutuyla
+  listelenir. Buradan:</p>
+  <ul>
+    <li><b>Yeni topic oluşturulur:</b> sağ üstte "Add a Topic" (ad, partition sayısı, saklama süresi).</li>
+    <li><b>Topic aranır:</b> üstteki kutuya adın bir parçasını yazmak yeter.</li>
+    <li><b>Toplu işlem yapılır:</b> seçilen topic'ler silinebilir veya içindeki mesajlar temizlenebilir (purge).</li>
+  </ul>
+  <figure><img src="assets/ss-topics-list.png" alt="Topics ekranı">
+    <figcaption>Topics ekranı: topic listesi, mesaj sayıları ve boyut; sağ üstte yeni topic oluşturma.</figcaption></figure>
+
+  <h3>Mesajları okumak: Topic &gt; Messages</h3>
+  <p>Bir topic'e tıklayıp Messages sekmesine geçince en yeni mesajlar listelenir. Bir satıra
+  tıklayınca mesajın içeriği renklendirilmiş JSON olarak açılır; Key / Value / Headers sekmeleriyle
+  mesajın her parçası incelenir. Üstteki araç çubuğundan:</p>
+  <ul>
+    <li><b>Yön seçilir:</b> Newest (en yeniden geriye) veya Oldest (en baştan ileriye), belirli tarihten de mümkün.</li>
+    <li><b>Partition daraltılır:</b> sadece belirli partition'lara bakılabilir.</li>
+    <li><b>Aranır:</b> sağdaki kutuya yazılan metin mesaj içeriğinde ve key'de aranır (fork ile artık
+      güvenle, bkz. Özellik 1). Daha karmaşık şartlar için "Add Filters" ile alan bazlı filtre yazılabilir.</li>
+  </ul>
+  <figure><img src="assets/ss-messages-detail.png" alt="Messages ekranı">
+    <figcaption>Messages ekranı: mesaj listesi ve tıklanan mesajın açılmış JSON içeriği (Key / Value / Headers).</figcaption></figure>
+
+  <h3>Mesaj göndermek: Produce Message</h3>
+  <p>Topic sayfasının sağ üstündeki Produce Message butonu, elle mesaj göndermek içindir: key, value
+  ve header girilir, istenirse partition seçilir. En sık kullanımı: bir tüketici uygulamayı hızlıca
+  test etmek veya bir hata senaryosunu yeniden üretmek.</p>
+
+  <h3>Consumers: kim nereye kadar okudu? (lag takibi)</h3>
+  <p>Kafka'da her tüketici uygulama bir "consumer group" ile okur ve kaldığı yer (offset) kaydedilir.
+  Bu ekran her grubun hangi topic'i nereye kadar okuduğunu ve lag değerini gösterir. Lag, yazılmış ama
+  o grup tarafından henüz okunmamış mesaj sayısıdır: sıfıra yakınsa tüketici yetişiyor, sürekli
+  büyüyorsa uygulama geride kalıyor veya durmuş demektir. Üretimde en çok bakılacak ekran budur.</p>
+  <figure><img src="assets/ss-consumers.png" alt="Consumers ekranı">
+    <figcaption>Consumers ekranı: demo-izleyici grubu 300 bin mesaj okuyup durdu, kalan 19,7 milyon mesaj lag olarak görünüyor.</figcaption></figure>
+
+  <h3>Brokers: sunucu sağlığı</h3>
+  <p>Kafka sunucularının (broker) durumu tek bakışta: kaç broker ayakta, disk kullanımı, partition'ların
+  sağlığı (online / in-sync / out-of-sync). Bir şeylerin ters gittiğinden şüphelenildiğinde ilk
+  bakılacak yer.</p>
+  <figure><img src="assets/ss-brokers.png" alt="Brokers ekranı">
+    <figcaption>Brokers ekranı: broker sayısı, sürüm, disk kullanımı ve partition sağlığı.</figcaption></figure>
+
+  <h3>Topic detayındaki diğer sekmeler</h3>
+  <table>
+    <tr><th style="width:120px">Sekme</th><th>Ne gösterir / ne yapılır</th></tr>
+    <tr><td>Overview</td><td>Partition dağılımı, offset'ler, toplam mesaj sayısı, saklama politikası.</td></tr>
+    <tr><td>Consumers</td><td>Sadece bu topic'i okuyan gruplar ve lag'leri.</td></tr>
+    <tr><td>Settings</td><td>Topic ayarları (saklama süresi, boyut limitleri vb.), düzenlenebilir.</td></tr>
+    <tr><td>Statistics</td><td>İstenirse topic taranıp boyut/anahtar istatistikleri çıkarılır.</td></tr>
+  </table>
+
+  <h2 class="break">Perde arkası: araç işleri nasıl hallediyor?</h2>
+  <p>Teknik olmayan bir özet: bu araç Kafka'nın önüne konmuş canlı bir <b>vitrin ve kumanda</b>dır.
+  Verinizi kendi içine taşımaz, çoğaltmaz; işin ağırlığı hep Kafka'da kalır, araç yalnızca sorar ve
+  gösterir. Ekrandan bir istek geçtiğinde izlediği yol:</p>
+
+  <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin:14px 0; font-size:12px;">
+    <div style="border:1px solid #c3c2b7; border-radius:8px; padding:8px 12px; background:#f7f6f0; text-align:center;"><b>Tarayıcınız</b><br>ekranı gösterir</div>
+    <div style="color:#898781; font-size:16px;">&rarr;</div>
+    <div style="border:1px solid #c3c2b7; border-radius:8px; padding:8px 12px; background:#f7f6f0; text-align:center;"><b>nginx</b><br>tek kapı (:80)</div>
+    <div style="color:#898781; font-size:16px;">&rarr;</div>
+    <div style="border:1px solid #c3c2b7; border-radius:8px; padding:8px 12px; background:#f7f6f0; text-align:center;"><b>Kafka UI</b><br>sunucu tarafı</div>
+    <div style="color:#898781; font-size:16px;">&rarr;</div>
+    <div style="border:1px solid #c3c2b7; border-radius:8px; padding:8px 12px; background:#eef1e9; text-align:center;"><b>Kafka</b><br>broker (asıl veri)</div>
+  </div>
+  <p style="font-size:12px; color:#52514e; margin-top:0;">"Grafik" butonu bu zincirin yanında ayrı bir
+  yol açar: Tarayıcı &rarr; nginx (<code>/viz/</code>) &rarr; kafka-viz &rarr; Kafka. Ana araç sade
+  kalsın diye grafik işini ayrı bir servis yapar.</p>
+
+  <table>
+    <tr><th style="width:225px">Soru</th><th>Kısa cevap</th></tr>
+    <tr><td>Verimi kendine kopyalıyor mu?</td><td>Hayır. Mesajlarınızın kopyasını tutmaz; her ekranı
+      açtığınızda Kafka'ya o an sorar ve gelen cevabı gösterir. Yalnızca pano ve metrik gibi özet
+      bilgileri, kısa aralıklarla (varsayılan her 30 saniyede bir) yenilenen bir özet olarak tutar.
+      Gördüğünüz mesajlar her zaman canlı Kafka'dır, eski bir kopya değil.</td></tr>
+    <tr><td>20 milyon mesajı nasıl anında açıyor?</td><td>Hepsini okumaz. Kafka'nın kendi okuma
+      mekanizmasıyla doğru noktaya atlar (offset), bir ekranlık mesaj okur ve gösterir. "Daha eski"
+      dedikçe bir sonraki sayfayı ister. Bu yüzden topic ne kadar büyük olursa olsun açılış hızlıdır.</td></tr>
+    <tr><td>Mesaj sayısı ve "lag" nereden geliyor?</td><td>Kafka'nın kendi kayıtlarından (offset'ler).
+      Her tüketici grubunun nereye kadar okuduğu Kafka'da yazılıdır; araç bunu okuyup grubun ne kadar
+      geride kaldığını (lag) hesaplar. Kendi sayacını tutmaz.</td></tr>
+    <tr><td>Broker metrikleri nereden? (Metrics sekmesi)</td><td>Kafka sürecinin içindeki canlı sağlık
+      sayaçlarından (JMX). Araç bu sayaçları okuyup gösterir. Bu sürümde JMX'i açtık; artık Metrics
+      sekmesi gerçek broker/JVM metriklerini getiriyor.</td></tr>
+    <tr><td>Topic açma, mesaj gönderme gibi işler?</td><td>Araç bir uzaktan kumanda gibi çalışır: bu
+      komutları Kafka'nın yönetim arayüzüne iletir, işi Kafka yapar.</td></tr>
+    <tr><td>Yanlışlıkla bir şeyi bozar mı?</td><td>Normal kullanımda hayır, sadece bakar (salt okur).
+      Değiştiren işlemler (silme, temizleme, ayar değiştirme) ayrı ve belirgin butonlardadır; kendi
+      kendine tetiklenmez.</td></tr>
+  </table>
+  <div class="note"><b>Özetle:</b> Kafka UI hafif bir arayüzdür çünkü asıl veriyi tutan, saklayan ve
+  hesaplayan hep Kafka'dır. Araç veriyi taşımadan, önüne canlı bir pencere koyar. Bu tasarım büyük
+  topic'lerde bile hızlı kalmasını ve tek başına bir "veri kopyası" riski oluşturmamasını sağlar.</div>
+
+  <h2 class="break">Fork ile eklediğimiz özellikler</h2>
+  <p>Buraya kadar anlatılanlar aracın hazır gelen yetenekleri. Aşağıdaki üç bölüm ise bizim
+  eklediklerimiz.</p>
+
+  <h3>1. Takılmayan arama (tarama bütçesi)</h3>
+  <h4>Sorun neydi?</h4>
+  <p>Kafbat UI'da bir topic içinde mesaj ararken aradığınız metin yoksa, araç eşleşme bulana kadar
+  topic'in tamamını taramaya devam ediyor. 20 milyon mesajlık bir topic'te bu, dakikalarca dönen ve
+  durdurulamayan bir ekran demek. Bu, projenin kendi kayıtlarında da bilinen bir hata (upstream issue
+  #442) ama henüz çözülmemişti.</p>
+  <h4>Ne yaptık?</h4>
+  <p>Aramaya bir tarama bütçesi ekledik: arama en fazla 500.000 kayıt tarar veya 30 saniye çalışır,
+  hangisi önce dolarsa orada durur. Durduğunda o ana kadar bulunanlar ekrandadır ve "Next" butonuyla
+  kaldığı yerden bir sonraki dilimi taratabilirsiniz. Yani kontrol artık kullanıcıda: küçük dilimler
+  halinde istediğiniz kadar derine inersiniz, araç asla kilitlenmez.</p>
+  <h4>Sonuç (canlı test)</h4>
+  <p>20 milyon mesajlık topic'te hiç eşleşmeyen bir arama: orijinalde süresiz takılıyordu, fork'ta 3,2
+  saniyede durdu (aşağıda sağ üstte 3244 ms, 85.289 mesaj tarandı; sol altta devam için Next butonu).</p>
+  <figure><img src="assets/ss-search-stop.png" alt="Sonuçsuz arama durdu">
+    <figcaption>Sonuçsuz arama: 3,2 saniyede durdu, "No messages found" + Next ile devam seçeneği.</figcaption></figure>
+  <div class="note"><b>İnce ayar (opsiyonel):</b> Varsayılanlar çoğu durum için yeterli. Gerekirse
+  <code>kafka.polling.maxScannedRecords</code> (varsayılan 500.000) ve
+  <code>kafka.polling.responseTimeoutMs</code> (varsayılan 30.000 ms). Docker ortam değişkeni olarak:
+  <code>KAFKA_POLLING_MAXSCANNEDRECORDS</code>, <code>KAFKA_POLLING_RESPONSETIMEOUTMS</code>.</div>
+
+  <h3>2. Arama hedefi: All / Key / Value / Headers <span class="new">YENİ</span></h3>
+  <h4>Sorun neydi?</h4>
+  <p>Eski arama tek bir metni mesajın her yerinde arıyordu: Key, Value ve Headers birlikte taranıyordu.
+  Bu pratik ama kalabalık topic'lerde gürültülü. Örneğin sadece header'daki bir correlation id'yi
+  aramak isterken value içinde geçen aynı metin de sonuç getiriyordu; veya sadece key'e bakmak
+  isteyen kullanıcı gereksiz value eşleşmelerini ayıklamak zorunda kalıyordu.</p>
+  <h4>Ne yaptık?</h4>
+  <p>Search kutusunun yanına bir hedef seçici eklendi. Varsayılan <b>All</b> eski davranışı korur.
+  Kullanıcı isterse aramayı yalnız <b>Key</b>, yalnız <b>Value</b> veya yalnız <b>Headers</b> ile
+  sınırlar. Seçim URL parametresine de yazılır: <code>stringFilterTarget=KEY|VALUE|HEADERS</code>.
+  Böylece sayfa yenilenince, paylaşılınca veya kaydedilmiş filtre geri gelince aynı hedef korunur.</p>
+  <h4>Teknik değişiklik</h4>
+  <ul>
+    <li>API'ye <code>StringFilterTargetDTO</code> parametresi eklendi; OpenAPI ve TypeSpec sözleşmesi güncellendi.</li>
+    <li>Backend filtreleyici artık hedefe göre sadece ilgili alanı kontrol ediyor.</li>
+    <li>Frontend filtre state'i, URL senkronizasyonu ve testleri yeni alanı kapsıyor.</li>
+  </ul>
+  <div class="note"><b>Geri uyumluluk:</b> Parametre verilmezse hedef otomatik <code>ALL</code> kabul
+  edilir. Bu yüzden eski linkler ve mevcut kullanım bozulmaz.</div>
+
+  <h3 class="break">3. "Search entire topic" ve canlı tarama sayacı</h3>
+  <h4>Sorun neydi?</h4>
+  <p>Bir sayfada eşleşme yoksa kullanıcı kalan topic'i aramak için sürekli <b>Next</b> butonuna basmak
+  zorundaydı. Büyük topic'lerde bu elle takip edilecek bir iş olmaktan çıkıyor.</p>
+  <h4>Ne yaptık?</h4>
+  <p>Boş sonuçtan sonra <b>Search entire topic</b> akışı eklendi. Araç kalan dilimleri otomatik gezer;
+  eşleşme bulursa durur, topic sonuna gelirse bittiğini söyler. Tarama sırasında kaç mesajın
+  incelendiği canlı sayaçla görünür ve kullanıcı istediği an <b>Stop</b> ile durdurabilir.</p>
+  <figure><img src="assets/ss-search-scanning.png" alt="Tüm topic taranıyor">
+    <figcaption>Search entire topic: sonuç yokken kalan dilimler otomatik taranıyor, sayaç canlı ilerliyor.</figcaption></figure>
+  <figure><img src="assets/ss-search-done-notfound.png" alt="Tüm topic araması bitti">
+    <figcaption>Tüm topic araması bittiğinde kullanıcıya net durum gösterilir; gereksiz retry döngüsü yok.</figcaption></figure>
+
+  <h3>4. Yüklenen mesajlarda sıralama</h3>
+  <p>Messages tablosunda <b>Offset</b>, <b>Partition</b> ve <b>Timestamp</b> başlıkları tıklanabilir hale
+  geldi. İlk tıklama azalan, ikinci tıklama artan sıralar; ok ikonu yönü gösterir. Bu sıralama
+  sunucuda tüm topic'i yeniden indekslemez, ekranda yüklenmiş / taranmış mevcut sonuçlar üzerinde
+  çalışır. Live modda doğal akış sırası bozulmasın diye kapalıdır.</p>
+  <figure><img src="assets/ss-sort-offset-asc.png" alt="Offset sıralama">
+    <figcaption>Offset'e göre artan sıralama: yüklenen sonuç seti içinde eski-yeni yönü hızlıca değiştirilebilir.</figcaption></figure>
+
+  <h3>5. Tarih aralığı filtresi</h3>
+  <p><b>Since time</b> modunda artık başlangıç tarihinin yanına opsiyonel bir bitiş tarihi eklenir.
+  Bitiş boşsa eski davranış aynen kalır. Bitiş seçilirse mesajlar başlangıçtan okunur ve seçilen
+  son ana kadar gösterilir; akış seçilen aralığın dışına çıktığında "selected range end" notuyla
+  durur. Böylece "şu iki saat arasında ne oldu?" sorusu tek işlemle cevaplanır.</p>
+  <figure><img src="assets/ss-daterange-active.png" alt="Tarih aralığı aktif">
+    <figcaption>Since time + end date: iki tarih arası mesaj inceleme tek filtreyle yapılır.</figcaption></figure>
+
+  <h3 class="break">6. "Grafik" butonu ve kafka-viz</h3>
+  <h4>Sorun neydi?</h4>
+  <p>Pazar araştırmamızda gördük: ücretsiz Kafka arayüzlerinin hiçbiri mesajların içeriğinden grafik
+  üretemiyor. "Bu topic'te hangi event tipi ne kadar var?", "dakikada kaç mesaj akıyor?" gibi sorular
+  için veriyi dışarı çekip elle analiz etmek gerekiyordu.</p>
+  <h4>Ne yaptık?</h4>
+  <p>İki parça:</p>
+  <ul>
+    <li><b>kafka-viz:</b> Ayrı, hafif bir grafik aracı. Topic'in JSON alanlarını otomatik keşfeder
+      (iç içe alanlar dahil, örn. <code>user.city</code>) ve seçilen alan için grafik çizer. Veriyi
+      nasıl okuduğu seçilebilir (aşağıdaki örnekleme modları).</li>
+    <li><b>"Grafik" butonu:</b> Kafka UI'da her topic sayfasının sağ üstüne eklendi. Basınca kafka-viz
+      yeni sekmede, o topic seçili olarak açılır. Grafik motoru Kafka UI'ın içine gömülmedi; ana araç
+      sade kaldı, grafik aracı bağımsız gelişebiliyor.</li>
+  </ul>
+  <figure><img src="assets/kafbat-grafik-buton.png" alt="Grafik butonu">
+    <figcaption>Topic sayfası: sağ üstte "Produce Message" yanına eklenen "Grafik" butonu (topic: test-20m, 20.000.002 mesaj).</figcaption></figure>
+
+  <h4>Örnekleme modları <span class="new">YENİ</span></h4>
+  <p>20 milyonluk bir topic'i her açılışta baştan sona okumak yavaş olur. Bunun yerine kafka-viz üç
+  mod sunar; hangi soruyu sorduğunuza göre hız ile kesinlik arasında seçim yaparsınız:</p>
+  <table>
+    <tr><th style="width:150px">Mod</th><th>Ne yapar</th><th style="width:150px">Ne zaman</th></tr>
+    <tr><td><b>Son N (hızlı)</b></td><td>Topic'in sonundan (en güncel) örnek alır. Saniyeler içinde
+      sonuç.</td><td>Şu anki duruma hızlı bakış.</td></tr>
+    <tr><td><b>Yayılmış (temsili)</b></td><td>Örneği topic'in başından sonuna eşit aralıklarla alır;
+      dağılım tüm veriyi temsil eder. Çok sayıda konumdan okuduğu için Son N'den yavaştır
+      (bu topic'te onlarca saniye).</td><td>Genel dağılımın doğru olması gerektiğinde.</td></tr>
+    <tr><td><b>Tümü (kesin)</b></td><td>Tüm mesajları okuyup kesin sayar (akış halinde, bellek şişmez).
+      Yavaş.</td><td>Kesin rakam gerektiğinde (yalnız değer dağılımı).</td></tr>
+  </table>
+  <p>Örnek boyutu 5 bin ile 1 milyon arasında seçilir. Her grafiğin altında artık
+  <b>gördüğünüz mesaj / toplam mesaj (yüzde kapsam)</b> ve kullanılan mod yazar; hangi kontrolde ne
+  kadar süreceğine dair bir tahmin ipucu da gösterilir.</p>
+  <figure><img src="assets/ss-viz-modes.png" alt="kafka-viz modları">
+    <figcaption>kafka-viz: test-20m topic'inde değer dağılımı. Üstte "Sampling" mod seçici; grafik
+    altında "49.998 / 20.000.002 (%0,25), mod: tail" kapsam bilgisi.</figcaption></figure>
+
+  <h4>Görünümler</h4>
+  <table>
+    <tr><th style="width:180px">Görünüm</th><th>Cevapladığı soru</th><th>Örnek</th></tr>
+    <tr><td>Değer dağılımı</td><td>Hangi değerden kaç adet var?</td><td>event_type'a göre mesaj sayıları</td></tr>
+    <tr><td>Zaman serisi</td><td>Dakikada kaç mesaj akıyor?</td><td>Trafik yoğunluğu, ani düşüş/artış</td></tr>
+    <tr><td>Zaman içinde toplam</td><td>Sayısal bir alanın toplamı nasıl seyrediyor?</td><td>order.amount ile dakikalık ciro</td></tr>
+    <tr><td>Zaman içinde ortalama</td><td>Sayısal bir alanın ortalaması nasıl seyrediyor?</td><td>Ortalama sepet tutarı</td></tr>
+  </table>
+  <div class="note">Araç, seçilen görünüme uymayan alanları otomatik gizler (örn. "toplam/ortalama"
+  seçince yalnız sayısal alanlar listelenir) ve varsa bir zaman alanını kendiliğinden seçer; böylece
+  boş veya hatalı grafik oluşmaz. Bozuk veya JSON olmayan mesajlar aracı çökertmez; atlanır ve atlanan
+  sayısı raporlanır. Araç topic'e hiçbir şey yazmaz, salt okurdur.</div>
+
+  <h4>Uçtan uca test (Playwright) <span class="new">YENİ</span></h4>
+  <p>test-20m topic'inde (20.000.002 mesaj) her mod gerçek bir tarayıcıda otomatik test edildi
+  (Playwright, izole Chromium). Yedi senaryonun tamamı geçti. Ölçülen süreler:</p>
+  <table>
+    <tr><th style="width:230px">Senaryo</th><th>Sonuç</th><th style="width:110px">Süre</th></tr>
+    <tr><td>Son N (tail), <code>event_type</code></td><td>Grafik güncellendi, %0,25 kapsam</td><td>~0,6 sn</td></tr>
+    <tr><td>Yayılmış (spread), <code>event_type</code></td><td>Grafik güncellendi, baştan sona temsili</td><td>~34 sn</td></tr>
+    <tr><td>Tümü (full), <code>event_type</code></td><td>20.000.002 / 20.000.002 (%100), kayıp yok</td><td>~115 sn</td></tr>
+    <tr><td>Tümü: tarama sırasında UI</td><td>Görünüm ve örnek kilitli, grafik soluk, "taranıyor" yazısı</td><td>anında</td></tr>
+    <tr><td>Tümü: alan değişince</td><td>Eski "%100" kalmıyor; grafik soluklaşıp "taranıyor" diyor, sonra doğru alana güncelliyor</td><td>~84 sn</td></tr>
+    <tr><td>Tarama sürerken alan keşfi (<code>/api/fields</code>)</td><td>Bloke olmuyor, hızlı cevap</td><td>~0,3 sn</td></tr>
+  </table>
+
+  <figure><img src="assets/ss-e2e-full-done.png" alt="Tümü modu tamamlandı">
+    <figcaption>"Tümü" modu bitti: <code>event_type</code> için 20 milyonun tamamı kesin sayıldı
+    (20.000.002 / 20.000.002, %100). Grafik nettir ve "%100" gerçekten gösterilen veriyle uyumludur.</figcaption></figure>
+
+  <div class="note"><b>Bulunan ve giderilen iki kusur (bu test sırasında):</b> (1) Sunucu, uzun full
+  taramayı ortak kilidi tutarak yapıyordu; tarama sürerken alan keşfi ve ikinci istek donuyordu.
+  Artık tarama kilit dışında yapılıyor, UI donmuyor. (2) Full modda alanı değiştirince eski grafik ve
+  yanıltıcı "%100" ekranda kalıyordu (yeni tarama arkada sürerken). Artık yeni istek başlar başlamaz
+  grafik soluklaşıp "taranıyor" diyor; kullanıcı bayat sonucu bitmiş sanmıyor.</div>
+
+  <div style="display:flex; gap:12px;">
+    <figure style="flex:1; margin-top:0;"><img src="assets/ss-e2e-full-fieldchange.png" alt="Alan değişince taranıyor durumu">
+      <figcaption>Alan <code>order.currency</code>'ye çevrildiği an: grafik soluk, meta "taranıyor";
+      eski "%100" gösterilmiyor (düzeltilen davranış).</figcaption></figure>
+    <figure style="flex:1; margin-top:0;"><img src="assets/ss-e2e-full-updated.png" alt="Yeni alan sonucu">
+      <figcaption>Tarama bitince grafik doğru alana güncellendi: <code>order.currency</code> = neredeyse
+      tümü TRY, kesin sayım (%100).</figcaption></figure>
+  </div>
+
+  <h3 class="break">7. Kurulum: tek adres, tek komut</h3>
+  <p>Tüm parçalar tek bir docker-compose dosyasında toplandı ve önlerine bir yönlendirici (nginx)
+  konuldu. Dışarıya açılan tek port var: 80.</p>
+  <pre>cd kafka-ui-demo
+docker compose up -d</pre>
+  <table>
+    <tr><th style="width:220px">Adres</th><th>Açılan</th></tr>
+    <tr><td><code>http://localhost/</code></td><td>Kafka UI (fork)</td></tr>
+    <tr><td><code>http://localhost/viz/</code></td><td>Grafik aracı (kafka-viz)</td></tr>
+  </table>
+  <p>Compose içinde 4 servis ayağa kalkar: Kafka (demo broker), Kafka UI (fork imajı
+  <code>kafka-ui-fix:local</code>), kafka-viz ve nginx yönlendirici.</p>
+  <h4>Docker ayarları nerede değiştirilir?</h4>
+  <p>Demo kurulumu bu repo dışında duran <code>kafka-ui-demo/docker-compose.yml</code> dosyasından
+  yönetildi. Kafbat UI'ın kendi örnek compose dosyaları ise bu repoda
+  <code>documentation/compose/</code> altında duruyor. Ben tüm upstream örneklerini kullanmadım;
+  sadece demo için gereken parçaları aldım: Kafka, UI, kafka-viz ve nginx.</p>
+  <table>
+    <tr><th style="width:230px">Değiştirilecek şey</th><th>Compose ayarı</th><th>Ne zaman?</th></tr>
+    <tr><td>Kafka broker adresi</td><td><code>KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS</code></td><td>Demo broker yerine şirket cluster'ına bağlanırken.</td></tr>
+    <tr><td>Dinamik cluster ekleme</td><td><code>DYNAMIC_CONFIG_ENABLED=true</code></td><td>Cluster'ları compose değiştirmeden arayüzden eklemek için.</td></tr>
+    <tr><td>Arama tarama limiti</td><td><code>KAFKA_POLLING_MAXSCANNEDRECORDS</code></td><td>Sonuçsuz aramanın en fazla kaç kayıt tarayacağını değiştirmek için.</td></tr>
+    <tr><td>Arama zaman limiti</td><td><code>KAFKA_POLLING_RESPONSETIMEOUTMS</code></td><td>Bir polling isteğinin en fazla kaç ms süreceğini değiştirmek için.</td></tr>
+    <tr><td>Broker JMX portu</td><td><code>KAFKA_JMX_PORT</code>, <code>KAFKA_JMX_HOSTNAME</code></td><td>Metrics sekmesinin broker metriklerini okuyabilmesi için.</td></tr>
+    <tr><td>UI metrik kaynağı</td><td><code>KAFKA_CLUSTERS_0_METRICS_TYPE=JMX</code>, <code>KAFKA_CLUSTERS_0_METRICS_PORT=9101</code></td><td>UI'ın JMX'i nereden okuyacağını söylemek için.</td></tr>
+    <tr><td>Kalıcı Kafka verisi</td><td>Kafka servisinde volume mount</td><td>Container restart sonrası topic ve mesajların silinmemesi için.</td></tr>
+  </table>
+  <h4>Şirket cluster'ına bağlanmak</h4>
+  <ul>
+    <li><b>Arayüzden:</b> dinamik konfigürasyon açık olduğu için (<code>DYNAMIC_CONFIG_ENABLED=true</code>)
+      yeni cluster, compose dosyasına dokunmadan arayüz üzerinden eklenebilir.</li>
+    <li>Veya compose'daki <code>KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS</code> değeri şirket broker adresiyle değiştirilir.</li>
+  </ul>
+  <div class="note"><b>Not:</b> Bu kurulumda kimlik doğrulama (login) bilinçli olarak kapalı; amaç
+  lokal deneme ve demo. Üretime alınırken Kafbat'ın kendi auth desteği (LDAP, OAuth2 vb.) açılacak.</div>
+
+  <h3 class="break">Ek düzeltme: Metrics sekmesi artık çalışıyor <span class="new">YENİ</span></h3>
+  <h4>Sorun neydi?</h4>
+  <p>Bir broker'ın <b>Metrics</b> sekmesine basınca ekran boş kalıyor ve tarayıcı konsolunda
+  <code>Unexpected end of JSON input</code> hatası çıkıyordu. Sebep tek kelimeyle eksik ayar:
+  kurulumda Kafka'ya bir metrik kaynağı (JMX) hiç tanımlanmamıştı. Kaynak olmayınca sunucu bu sekmeye
+  boş bir cevap dönüyor, arayüz de o boş cevabı okumaya çalışıp hata veriyordu. Kafka'nın kendisinde,
+  verinizde veya diğer ekranlarda bir sorun yoktu; etkilenen tek yer bu sekmeydi.</p>
+  <h4>Ne yaptık?</h4>
+  <ul>
+    <li>Kafka broker'ında <b>JMX'i açtık</b> (metriklerin okunduğu standart Kafka arayüzü, port 9101).</li>
+    <li>Kafka UI'a metrikleri bu porttan okumasını söyledik (<code>METRICS_TYPE: JMX</code>).</li>
+    <li>Aynı düzenlemede broker'a <b>kalıcı veri alanı (volume)</b> ekledik; böylece bundan sonra
+      yeniden başlatma topic'leri silmez.</li>
+  </ul>
+  <pre>demo-kafka:
+  environment:
+    KAFKA_JMX_PORT: 9101
+    KAFKA_JMX_HOSTNAME: demo-kafka
+
+kafka-ui:
+  environment:
+    KAFKA_CLUSTERS_0_METRICS_TYPE: JMX
+    KAFKA_CLUSTERS_0_METRICS_PORT: 9101</pre>
+  <p>Artık Metrics sekmesi broker ve JVM metriklerini (istek oranları, kuyruk boyutları, bellek vb.)
+  gerçek değerlerle getiriyor ve konsol hatası kalmadı.</p>
+  <figure><img src="assets/ss-metrics-fixed.png" alt="Metrics sekmesi çalışıyor">
+    <figcaption>Broker 1 &gt; Metrics: JMX üzerinden gelen gerçek metrikler listeleniyor
+    (ör. <code>kafka_server_...</code>); tarayıcı konsolunda hata yok. Otomatik test (Playwright)
+    0 konsol hatası ve veri render ile geçti.</figcaption></figure>
+
+  <h3>Teknik künye</h3>
+  <table>
+    <tr><td style="width:130px"><b>Taban</b></td><td>Kafbat UI (github.com/kafbat/kafka-ui), Apache-2.0 lisans, upstream commit d0e3a7e üzerine.</td></tr>
+    <tr><td><b>Fork dalı</b></td><td><code>fix/search-polling-budget</code> (arama bütçesi, hedefli arama, tüm topic arama, sıralama, tarih aralığı + Grafik butonu).</td></tr>
+    <tr><td><b>Grafik aracı</b></td><td>kafka-viz: Python (Flask) + Chart.js, bağımsız küçük servis, salt okur. Modlar: son N / yayılmış / tümü. Yönlendirici (nginx) full tarama için uzun timeout ile ayarlı.</td></tr>
+    <tr><td><b>Test ortamı</b></td><td>test-20m topic'i: 20.000.002 sentetik JSON mesaj, 6 partition, tek broker.</td></tr>
+    <tr><td><b>Doğrulama</b></td><td>Bu dokümandaki tüm ekran görüntüleri 03.07.2026'da çalışan ortamdan alındı.</td></tr>
+  </table>
+  <p class="stamp">Sorular için: Kadir (kadiraycareer@gmail.com)</p>
+
+</div>
+</body>
+</html>

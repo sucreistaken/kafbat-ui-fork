@@ -70,6 +70,7 @@ export const useTopicMessages = ({
 
       [
         MessagesFilterKeys.stringFilter,
+        MessagesFilterKeys.stringFilterTarget,
         MessagesFilterKeys.keySerde,
         MessagesFilterKeys.smartFilterId,
         MessagesFilterKeys.valueSerde,

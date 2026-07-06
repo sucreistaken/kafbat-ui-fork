@@ -13,6 +13,7 @@ type MessagesFilterFieldsType = Pick<
   | 'keySerde'
   | 'valueSerde'
   | 'stringFilter'
+  | 'stringFilterTarget'
   | 'activeFilterId'
   | 'smartFilterId'
 >;
@@ -116,6 +117,9 @@ export function useMessagesFiltersFields(resourceName: string) {
       setTopicMessageFiltersFromLocalStorage(MessagesFilterKeys.keySerde);
       setTopicMessageFiltersFromLocalStorage(MessagesFilterKeys.valueSerde);
       setTopicMessageFiltersFromLocalStorage(MessagesFilterKeys.stringFilter);
+      setTopicMessageFiltersFromLocalStorage(
+        MessagesFilterKeys.stringFilterTarget
+      );
       setTopicMessageFiltersFromLocalStorage(MessagesFilterKeys.activeFilterId);
       setTopicMessageFiltersFromLocalStorage(MessagesFilterKeys.smartFilterId);
     } else {
@@ -126,6 +130,9 @@ export function useMessagesFiltersFields(resourceName: string) {
       setTopicMessageFiltersFromUrlParams(MessagesFilterKeys.partitions);
       setTopicMessageFiltersFromUrlParams(MessagesFilterKeys.keySerde);
       setTopicMessageFiltersFromUrlParams(MessagesFilterKeys.valueSerde);
+      setTopicMessageFiltersFromUrlParams(
+        MessagesFilterKeys.stringFilterTarget
+      );
       setTopicMessageFiltersFromUrlParams(MessagesFilterKeys.activeFilterId);
       setTopicMessageFiltersFromUrlParams(MessagesFilterKeys.smartFilterId);
     }

@@ -24,7 +24,22 @@ Based on upstream commit `d0e3a7e`.
 - Backend: search polling budget + config guards + rejection handling
 - Frontend: `topicMessages.tsx` handles `DONE`, resets/commits scan counters
 
-## 2. "Search entire topic" with a live scanned counter
+## 2. Search target selector
+
+**Problem:** string search matched key, value, and headers together. That was
+backward-compatible, but noisy when the user knew the text should only be in one
+part of the message.
+
+**What changed:** the Messages filter bar now has an **All / Key / Value /
+Headers** selector next to the search input. `All` keeps the old behavior. The
+selected target is sent as `stringFilterTarget`, persisted in URL/local filter
+state, and included in the generated API contract.
+
+- Backend: `StringFilterTargetDTO` drives the message predicate
+- API contract: OpenAPI + TypeSpec include the new query parameter
+- Frontend: target selector, URL/filter persistence, generated hook query key
+
+## 3. "Search entire topic" with a live scanned counter
 
 **Problem:** when a slice returned no matches, the user had to press *Next*
 repeatedly to walk the whole topic.
@@ -38,7 +53,7 @@ scanned"), with a **Stop** button. The counter is the sum of each polling round'
 - `MessagesTable.tsx` (`scanAll` flow), `useMessageFiltersStore.ts`
   (`scannedCommitted` / `scannedCurrent`, `commitScanned`, `resetScan`)
 
-## 3. Sort loaded results
+## 4. Sort loaded results
 
 **Problem:** messages were shown only in arrival order; finding the newest/oldest
 record or the largest offset meant scanning rows by eye (upstream issue #1203).
@@ -51,7 +66,7 @@ of streaming data is preserved.
 
 - `MessagesTable.tsx` (client-side sort), `TableHeaderCell.tsx` (`hint` tooltip)
 
-## 4. Date range filter
+## 5. Date range filter
 
 **Problem:** time modes were single-ended: "from a time" or "until a time"
 separately. "Messages between these two times" was not possible in one step
@@ -67,10 +82,21 @@ end empty keeps the original open-ended behavior.
   (client-side crop + range-end stop), `useMessageFiltersStore.ts`
   (`rangeEndTimestamp`)
 
-## 5. Charts shortcut on the topic page
+## 6. Charts shortcut on the topic page
 
 A **Charts** button on the topic header links to the visualization view, so jumping
 from a topic to its graphs no longer needs manual URL editing.
+
+## 7. Fork report PDF
+
+The Turkish report PDF at `docs/kafka-ui-fork-report.pdf` is now backed by the
+checked-in HTML source `docs/kafka-ui-fork-ozellikler.html`. The report has been
+updated with:
+
+- the new search target selector
+- search-entire-topic, sorting, and date-range notes that were missing from the
+  previous PDF
+- Docker/JMX settings showing which compose values to change and why
 
 ## Demo environment (not part of this repo)
 

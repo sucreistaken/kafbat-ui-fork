@@ -2635,6 +2635,12 @@ paths:
           schema:
             type: string
           explode: false
+        - name: stringFilterTarget
+          in: query
+          required: false
+          schema:
+            $ref: '#/components/schemas/StringFilterTarget'
+          explode: false
         - name: smartFilterId
           in: query
           required: false
@@ -3130,6 +3136,8 @@ components:
                             type: string
                           clientSecret:
                             type: string
+                          clientAuthenticationMethod:
+                            type: string
                           clientName:
                             type: string
                           redirectUri:
@@ -3306,6 +3314,29 @@ components:
                             type: string
                           password:
                             type: string
+                          oauth:
+                            type: object
+                            properties:
+                              tokenUrl:
+                                type: string
+                              clientId:
+                                type: string
+                              clientSecret:
+                                type: string
+                              scopes:
+                                type: array
+                                items:
+                                  type: string
+                              tokenCacheEnabled:
+                                type: boolean
+                                default: true
+                              tokenRefreshBuffer:
+                                type: string
+                                format: duration
+                              maxRetries:
+                                type: integer
+                                format: int32
+                                default: 1
                       schemaRegistrySsl:
                         type: object
                         properties:
@@ -4996,6 +5027,13 @@ components:
       enum:
         - ASC
         - DESC
+    StringFilterTarget:
+      type: string
+      enum:
+        - ALL
+        - KEY
+        - VALUE
+        - HEADERS
     Task:
       type: object
       required:
