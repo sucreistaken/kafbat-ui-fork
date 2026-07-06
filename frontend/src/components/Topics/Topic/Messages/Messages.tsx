@@ -22,7 +22,11 @@ const Messages: React.FC = () => {
         phaseMessage={phase}
         abortFetchData={abortFetchData}
       />
-      <MessagesTable messages={messages} isFetching={isFetching} />
+      <MessagesTable
+        messages={messages}
+        isFetching={isFetching}
+        abortFetchData={abortFetchData}
+      />
     </>
   );
 };

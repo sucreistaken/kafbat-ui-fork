@@ -28,6 +28,38 @@ export const FilterModeTypeSelectorWrapper = styled.div`
   }
 `;
 
+// Tarih araligi bitis secici: segmented kontrolun disinda, kendi basina duran
+// etiketli bir alan. Baslangic secicisini sikistirmamak icin ayri tutulur.
+export const RangeEndWrapper = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 6px;
+`;
+
+export const RangeEndLabel = styled.span`
+  font-size: 12px;
+  color: ${({ theme }) => theme.input.color.normal};
+  white-space: nowrap;
+`;
+
+export const RangeEndDatePicker = styled(DatePicker)`
+  height: 32px;
+  border: 1px ${({ theme }) => theme.select.borderColor.normal} solid;
+  border-radius: 4px;
+  font-size: 14px;
+  width: 150px;
+  min-width: 150px;
+  padding-left: 12px;
+  background-color: ${({ theme }) => theme.input.backgroundColor.normal};
+  color: ${({ theme }) => theme.input.color.normal};
+  &::placeholder {
+    color: ${({ theme }) => theme.input.color.normal};
+  }
+  &:focus {
+    outline: none;
+  }
+`;
+
 export const OffsetSelector = styled(Input)`
   border-radius: 0 4px 4px 0 !important;
   &::placeholder {
@@ -41,7 +73,8 @@ export const DatePickerInput = styled(DatePicker)`
   border-left: none;
   border-radius: 0 4px 4px 0;
   font-size: 14px;
-  width: 100%;
+  width: 150px;
+  min-width: 150px;
   padding-left: 12px;
   background-color: ${({ theme }) => theme.input.backgroundColor.normal};
   color: ${({ theme }) => theme.input.color.normal};

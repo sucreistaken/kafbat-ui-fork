@@ -109,6 +109,11 @@ export const useTopicMessages = ({
 
       const currentCursor = getCursorValue(searchParams);
 
+      // fresh search (no cursor) -> reset "scan all" flag and scanned counters
+      if (currentCursor === 0) {
+        useMessageFiltersStore.getState().resetScan();
+      }
+
       // filters stay the same and we have cursor set cursor
       if (nextCursor && prevCursor.current < currentCursor) {
         requestParams.set(MessagesFilterKeys.cursor, nextCursor);
@@ -152,10 +157,22 @@ export const useTopicMessages = ({
               if (parsedData.phase?.name) setPhase(parsedData.phase.name);
               break;
             case TopicMessageEventTypeEnum.CONSUMING:
-              if (consuming) setConsumptionStats(consuming);
+              if (consuming) {
+                setConsumptionStats(consuming);
+                // live scanned counter for the "scan all" progress banner
+                useMessageFiltersStore
+                  .getState()
+                  .setScannedCurrent(consuming.messagesConsumed ?? 0);
+              }
               break;
-            case TopicMessageEventTypeEnum.DONE:
-              if (consuming) setConsumptionStats(consuming);
+            case TopicMessageEventTypeEnum.DONE: {
+              const store = useMessageFiltersStore.getState();
+              if (consuming) {
+                setConsumptionStats(consuming);
+                store.setScannedCurrent(consuming.messagesConsumed ?? 0);
+              }
+              // fold this round's scanned count into the running total
+              store.commitScanned();
               if (cursor?.id) {
                 // more data is available, but this polling round is over
                 setIsFetching(false);
@@ -164,6 +181,7 @@ export const useTopicMessages = ({
                 abortFetchData();
               }
               break;
+            }
             default:
           }
         },

@@ -26,6 +26,12 @@ Versatile, fast and lightweight web UI for managing Apache Kafka® clusters.
   <img src="https://repobeats.axiom.co/api/embed/88d2bd9887380c7d86e2f986725d9af52ebad7f4.svg" alt="stats"/>
 </p>
 
+> **This is a fork of [kafbat/kafka-ui](https://github.com/kafbat/kafka-ui).**
+> It adds non-blocking message search (scan budget), a "Search entire topic" scan
+> with a live counter, click-to-sort message columns, a date-range filter, and a
+> Charts shortcut on the topic page. See **[FORK-CHANGES.md](FORK-CHANGES.md)** for
+> the full list, the reasoning, and the files touched.
+
 #### Kafbat UI is a free, open-source web UI to monitor and manage Apache Kafka clusters.
 
 [Kafbat UI](https://kafbat.io/) is a simple tool that makes your data flows observable, helps find and troubleshoot issues faster and deliver optimal performance. Its lightweight dashboard makes it easy to track key metrics of your Kafka clusters - Brokers, Topics, Partitions, Production, and Consumption.
