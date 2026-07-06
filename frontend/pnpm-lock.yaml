@@ -30,8 +30,8 @@ importers:
         specifier: 2.0.1
         version: 2.0.1
       '@szhsin/react-menu':
-        specifier: 3.5.3
-        version: 3.5.3(react-dom@18.2.0(react@18.2.0))(react@18.2.0)
+        specifier: 4.5.2
+        version: 4.5.2(react-dom@18.2.0(react@18.2.0))(react@18.2.0)
       '@tanstack/react-query':
         specifier: 5.95.2
         version: 5.95.2(react@18.2.0)
@@ -1335,8 +1335,8 @@ packages:
   '@swc/types@0.1.26':
     resolution: {integrity: sha512-lyMwd7WGgG79RS7EERZV3T8wMdmPq3xwyg+1nmAM64kIhx5yl+juO2PYIHb7vTiPgPCj8LYjsNV2T5wiQHUEaw==}
 
-  '@szhsin/react-menu@3.5.3':
-    resolution: {integrity: sha512-jxo8oaRwxmVjUzkyOi/ZJiXaZiuFPMIxFzyJdUKfnhBLYiEOVTU9M2CiPuEkirILoareR2GJj2K3y8a81CBPlw==}
+  '@szhsin/react-menu@4.5.2':
+    resolution: {integrity: sha512-VIfCFGq997iHhDBR5Wrgx5XqwzLQj0Lj1PQV9XSrT/ymvdI4GE/oAKx81dXWfeXiZgyXTicDCfeGrjlAzjoYlQ==}
     peerDependencies:
       react: '>=16.14.0'
       react-dom: '>=16.14.0'
@@ -4075,8 +4075,8 @@ packages:
     peerDependencies:
       react: '>=16.8'
 
-  react-transition-state@1.1.5:
-    resolution: {integrity: sha512-ITY2mZqc2dWG2eitJkYNdcSFW8aKeOlkL2A/vowRrLL8GH3J6Re/SpD/BLvQzrVOTqjsP0b5S9N10vgNNzwMUQ==}
+  react-transition-state@2.4.0:
+    resolution: {integrity: sha512-d86g/nv4vsDBLBum8KSeb9S3aWDlptDQ4ydFvfCHk98ePFNILXq5Wu3tVgPXJrItxvMLtJ+XPjmGw0RmMyYMBg==}
     peerDependencies:
       react: '>=16.8.0'
       react-dom: '>=16.8.0'
@@ -6024,12 +6024,11 @@ snapshots:
     dependencies:
       '@swc/counter': 0.1.3
 
-  '@szhsin/react-menu@3.5.3(react-dom@18.2.0(react@18.2.0))(react@18.2.0)':
+  '@szhsin/react-menu@4.5.2(react-dom@18.2.0(react@18.2.0))(react@18.2.0)':
     dependencies:
-      prop-types: 15.8.1
       react: 18.2.0
       react-dom: 18.2.0(react@18.2.0)
-      react-transition-state: 1.1.5(react-dom@18.2.0(react@18.2.0))(react@18.2.0)
+      react-transition-state: 2.4.0(react-dom@18.2.0(react@18.2.0))(react@18.2.0)
 
   '@tanstack/query-core@5.95.2': {}
 
@@ -9350,7 +9349,7 @@ snapshots:
       '@remix-run/router': 1.23.2
       react: 18.2.0
 
-  react-transition-state@1.1.5(react-dom@18.2.0(react@18.2.0))(react@18.2.0):
+  react-transition-state@2.4.0(react-dom@18.2.0(react@18.2.0))(react@18.2.0):
     dependencies:
       react: 18.2.0
       react-dom: 18.2.0(react@18.2.0)
