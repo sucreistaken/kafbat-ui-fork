@@ -60,8 +60,8 @@ importers:
         specifier: 10.4.0
         version: 10.4.0
       lossless-json:
-        specifier: 2.0.11
-        version: 2.0.11
+        specifier: 4.3.0
+        version: 4.3.0
       pretty-ms:
         specifier: 7.0.1
         version: 7.0.1
@@ -3590,8 +3590,8 @@ packages:
     resolution: {integrity: sha512-lyuxPGr/Wfhrlem2CL/UcnUc1zcqKAImBDzukY7Y5F/yQiNdko6+fRLevlw1HgMySw7f611UIY408EtxRSoK3Q==}
     hasBin: true
 
-  lossless-json@2.0.11:
-    resolution: {integrity: sha512-BP0vn+NGYvzDielvBZaFain/wgeJ1hTvURCqtKvhr1SCPePdaaTanmmcplrHfEJSJOUql7hk4FHwToNJjWRY3g==}
+  lossless-json@4.3.0:
+    resolution: {integrity: sha512-ToxOC+SsduRmdSuoLZLYAr5zy1Qu7l5XhmPWM3zefCZ5IcrzW/h108qbJUKfOlDlhvhjUK84+8PSVX0kxnit0g==}
 
   lru-cache@11.3.6:
     resolution: {integrity: sha512-Gf/KoL3C/MlI7Bt0PGI9I+TeTC/I6r/csU58N4BSNc4lppLBeKsOdFYkK+dX0ABDUMJNfCHTyPpzwwO21Awd3A==}
@@ -8889,7 +8889,7 @@ snapshots:
     dependencies:
       js-tokens: 4.0.0
 
-  lossless-json@2.0.11: {}
+  lossless-json@4.3.0: {}
 
   lru-cache@11.3.6: {}
 
