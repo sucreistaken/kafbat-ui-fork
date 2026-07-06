@@ -30,7 +30,9 @@ Versatile, fast and lightweight web UI for managing Apache Kafka® clusters.
 > It adds non-blocking message search (scan budget), a "Search entire topic" scan
 > with a live counter, click-to-sort message columns, a date-range filter, and a
 > Charts shortcut on the topic page. See **[FORK-CHANGES.md](FORK-CHANGES.md)** for
-> the full list, the reasoning, and the files touched.
+> the full list, the reasoning, and the files touched. A detailed illustrated
+> report (features, how the demo stack is built and run, screenshots) is in
+> **[docs/kafka-ui-fork-report.pdf](docs/kafka-ui-fork-report.pdf)** (Turkish).
 
 #### Kafbat UI is a free, open-source web UI to monitor and manage Apache Kafka clusters.
 
