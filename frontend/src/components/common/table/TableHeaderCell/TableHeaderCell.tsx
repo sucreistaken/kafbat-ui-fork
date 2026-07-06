@@ -10,6 +10,7 @@ export interface TableHeaderCellProps {
   sortOrder?: SortOrder;
   orderValue?: string;
   handleOrderBy?: (orderBy: string | null) => void;
+  hint?: string;
 }
 
 const TableHeaderCell: React.FC<PropsWithChildren<TableHeaderCellProps>> = (
@@ -23,6 +24,7 @@ const TableHeaderCell: React.FC<PropsWithChildren<TableHeaderCellProps>> = (
     sortOrder,
     orderValue,
     handleOrderBy,
+    hint,
     ...restProps
   } = props;
 
@@ -49,7 +51,7 @@ const TableHeaderCell: React.FC<PropsWithChildren<TableHeaderCellProps>> = (
     tabIndex: 0,
   };
   return (
-    <S.TableHeaderCell {...restProps}>
+    <S.TableHeaderCell {...restProps} title={hint}>
       <S.Title isOrdered={isOrdered} {...orderableProps}>
         {title}
       </S.Title>

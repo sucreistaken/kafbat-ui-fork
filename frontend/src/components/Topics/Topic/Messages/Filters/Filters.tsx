@@ -1,6 +1,10 @@
 import 'react-datepicker/dist/react-datepicker.css';
 
-import { SerdeUsage, TopicMessageConsuming } from 'generated-sources';
+import {
+  PollingMode,
+  SerdeUsage,
+  TopicMessageConsuming,
+} from 'generated-sources';
 import React, { ChangeEvent, useMemo, useState } from 'react';
 import MultiSelect from 'components/common/MultiSelect/MultiSelect.styled';
 import Select from 'components/common/Select/Select';
@@ -12,6 +16,7 @@ import { useSerdes } from 'lib/hooks/api/topicMessages';
 import useAppParams from 'lib/hooks/useAppParams';
 import { RouteParamsClusterTopic } from 'lib/paths';
 import { useMessagesFilters } from 'lib/hooks/useMessagesFilters';
+import { useMessageFiltersStore } from 'lib/hooks/useMessageFiltersStore';
 import { ModeOptions } from 'lib/hooks/filterUtils';
 import { useTopicDetails } from 'lib/hooks/api/topics';
 import EditIcon from 'components/common/Icons/EditIcon';
@@ -67,6 +72,23 @@ const Filters: React.FC<FiltersProps> = ({
   const { data: topic } = useTopicDetails({ clusterName, topicName });
   const [createdEditedSmartId, setCreatedEditedSmartId] = useState<string>();
 
+  // Tarih araligi: "Since time" (FROM_TIMESTAMP) baslangicina istege bagli bir
+  // bitis zamani. Store'da tutulur, MessagesTable client-side kirpar.
+  const rangeEndTimestamp = useMessageFiltersStore(
+    (state) => state.rangeEndTimestamp
+  );
+  const setRangeEndTimestamp = useMessageFiltersStore(
+    (state) => state.setRangeEndTimestamp
+  );
+
+  // Moddan cikilinca (ornegin Newest'e gecis) bayat bitis zamani kalmasin.
+  const handleModeChange = (newMode: PollingMode) => {
+    if (newMode !== PollingMode.FROM_TIMESTAMP) {
+      setRangeEndTimestamp(null);
+    }
+    setMode(newMode);
+  };
+
   const partitions = useMemo(() => {
     return (topic?.partitions || []).reduce<{
       dict: Record<string, { label: string; value: number }>;
@@ -110,7 +132,7 @@ const Filters: React.FC<FiltersProps> = ({
           <S.FilterModeTypeSelectorWrapper>
             <S.FilterModeTypeSelect
               id="selectSeekType"
-              onChange={setMode}
+              onChange={handleModeChange}
               value={mode}
               selectSize="M"
               minWidth="100px"
@@ -142,6 +164,29 @@ const Filters: React.FC<FiltersProps> = ({
                 />
               ))}
           </S.FilterModeTypeSelectorWrapper>
+
+          {/* Since time modunda istege bagli bitis zamani: [baslangic, bitis]
+              araligi. Segmented kontrolun disinda, kendi etiketli alani; bos
+              birakilirsa ust sinir yok (mevcut davranis). */}
+          {mode === PollingMode.FROM_TIMESTAMP && (
+            <S.RangeEndWrapper>
+              <S.RangeEndLabel>to</S.RangeEndLabel>
+              <S.RangeEndDatePicker
+                selected={
+                  rangeEndTimestamp ? new Date(rangeEndTimestamp) : null
+                }
+                onChange={(value: Date | null) =>
+                  setRangeEndTimestamp(value ? value.getTime() : null)
+                }
+                minDate={date || undefined}
+                showTimeInput
+                timeInputLabel="Time:"
+                dateFormat="MMM d, yyyy"
+                placeholderText="End (optional)"
+                isClearable
+              />
+            </S.RangeEndWrapper>
+          )}
           <MultiSelect
             disabled={isLoading}
             options={partitions.list}
