@@ -53,22 +53,32 @@
   <h1>Kafka UI: Genel Kullanım ve Eklediğimiz Özellikler</h1>
   <p class="lede">Kafbat UI (açık kaynak, Apache-2.0) tabanlı Kafka arayüzümüz: uygulama ne
   işe yarar, nasıl kullanılır ve fork ile neler ekledik.</p>
-  <p class="stamp">03.07.2026 &nbsp;|&nbsp; 20 milyon mesajlık gerçek test ortamında canlı doğrulandı</p>
+  <p class="stamp">07.07.2026 &nbsp;|&nbsp; 20 milyon mesajlık gerçek test ortamında canlı doğrulandı</p>
 
   <h3>Bu doküman</h3>
-  <p>Üç bölümden oluşur. Önce uygulamanın kendisi: Kafka UI nedir, günlük işte hangi ekran ne için
-  kullanılır. Sonra kısa bir "perde arkası": araç işleri nasıl hallediyor. En sonda fork ile
-  eklediğimiz üç özellik. Eklenenlerin özeti:</p>
+  <p>Bu doküman teknik rapor gibi değil, ürünü kullanacak birinin hızlıca anlayacağı şekilde
+  yazıldı. Önce Kafka UI'ın ne işe yaradığını anlatır, sonra fork ile eklenenleri ve son olarak
+  Docker tarafında hangi ayarın nereden değişeceğini gösterir.</p>
+  <p>Eklenenlerin kısa özeti:</p>
   <table>
     <tr><th style="width:170px">Özellik</th><th>Ne işe yarıyor</th></tr>
     <tr><td>1. Takılmayan arama</td><td>Orijinal araçta sonuçsuz mesaj araması, topic'in
       tamamını tarayıp dakikalarca kilitleniyordu. Artık arama bir "tarama bütçesi" ile saniyeler
       içinde duruyor, istenirse kaldığı yerden devam ediyor.</td></tr>
-    <tr><td>2. Grafik butonu</td><td>Topic sayfasındaki tek bir butonla, mesajların içindeki JSON
+    <tr><td>2. Hedefli arama</td><td>Arama artık tüm mesajda, sadece Key'de, sadece Value'da veya
+      sadece Headers içinde yapılabiliyor. Böylece yanlış alandaki eşleşmeler sonucu kirletmiyor.</td></tr>
+    <tr><td>3. Tüm topic arama</td><td>Sonuç çıkmayan sayfada sürekli Next'e basmak gerekmiyor.
+      Search entire topic kalan dilimleri otomatik tarıyor, canlı sayaç gösteriyor ve Stop ile duruyor.</td></tr>
+    <tr><td>4. Sıralama ve tarih aralığı</td><td>Yüklenen mesajlar Offset, Partition ve Timestamp'e
+      göre sıralanabiliyor. Since time moduna bitiş tarihi eklendi; iki tarih arası tek adımda
+      inceleniyor.</td></tr>
+    <tr><td>5. Grafik butonu</td><td>Topic sayfasındaki tek bir butonla, mesajların içindeki JSON
       alanlarından anında grafik çizen bir araç açılıyor (dağılım, zaman serisi, toplam, ortalama).
       Örnekleme, temsili örnekleme ve tüm veriyi kesin sayma modlarıyla. Piyasadaki ücretsiz
       araçların hiçbirinde bu yok.</td></tr>
-    <tr><td>3. Tek adres, tek komut</td><td>Her şey tek bir <code>docker compose up -d</code> ile
+    <tr><td>6. Docker ayarları</td><td>Hangi compose değişkeninin ne işe yaradığı açıklandı:
+      broker adresi, dinamik config, arama bütçesi, JMX metrikleri ve kalıcı Kafka verisi.</td></tr>
+    <tr><td>7. Tek adres, tek komut</td><td>Her şey tek bir <code>docker compose up -d</code> ile
       ayağa kalkıyor ve tek porttan (80) sunuluyor: ana arayüz <code>/</code>, grafik aracı
       <code>/viz/</code>.</td></tr>
   </table>
@@ -100,8 +110,9 @@
   <ul>
     <li><b>Yön seçilir:</b> Newest (en yeniden geriye) veya Oldest (en baştan ileriye), belirli tarihten de mümkün.</li>
     <li><b>Partition daraltılır:</b> sadece belirli partition'lara bakılabilir.</li>
-    <li><b>Aranır:</b> sağdaki kutuya yazılan metin mesaj içeriğinde ve key'de aranır (fork ile artık
-      güvenle, bkz. Özellik 1). Daha karmaşık şartlar için "Add Filters" ile alan bazlı filtre yazılabilir.</li>
+    <li><b>Aranır:</b> sağdaki kutuya yazılan metin mesajda aranır. Fork ile arama hem takılmadan
+      durur hem de <b>All / Key / Value / Headers</b> hedeflerinden biri seçilerek daraltılabilir
+      (bkz. Özellik 1 ve 2). Daha karmaşık şartlar için "Add Filters" ile alan bazlı filtre yazılabilir.</li>
   </ul>
   <figure><img src="assets/ss-messages-detail.png" alt="Messages ekranı">
     <figcaption>Messages ekranı: mesaj listesi ve tıklanan mesajın açılmış JSON içeriği (Key / Value / Headers).</figcaption></figure>
@@ -179,7 +190,7 @@
   topic'lerde bile hızlı kalmasını ve tek başına bir "veri kopyası" riski oluşturmamasını sağlar.</div>
 
   <h2 class="break">Fork ile eklediğimiz özellikler</h2>
-  <p>Buraya kadar anlatılanlar aracın hazır gelen yetenekleri. Aşağıdaki üç bölüm ise bizim
+  <p>Buraya kadar anlatılanlar aracın hazır gelen yetenekleri. Aşağıdaki bölümler ise bizim
   eklediklerimiz.</p>
 
   <h3>1. Takılmayan arama (tarama bütçesi)</h3>
@@ -352,6 +363,10 @@ docker compose up -d</pre>
   yönetildi. Kafbat UI'ın kendi örnek compose dosyaları ise bu repoda
   <code>documentation/compose/</code> altında duruyor. Ben tüm upstream örneklerini kullanmadım;
   sadece demo için gereken parçaları aldım: Kafka, UI, kafka-viz ve nginx.</p>
+  <div class="note"><b>Kısa cevap:</b> Demo ortamında değişiklik yapmak istiyorsanız bakacağınız yer
+  <code>kafka-ui-demo/docker-compose.yml</code>. Bu repo içindeki <code>documentation/compose/</code>
+  klasörü Kafbat'ın örnekleri; LDAP, SASL, SSL, Schema Registry, Kafka Connect gibi her örneği bu
+  kurulumda kullanmıyoruz.</div>
   <table>
     <tr><th style="width:230px">Değiştirilecek şey</th><th>Compose ayarı</th><th>Ne zaman?</th></tr>
     <tr><td>Kafka broker adresi</td><td><code>KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS</code></td><td>Demo broker yerine şirket cluster'ına bağlanırken.</td></tr>
@@ -362,6 +377,27 @@ docker compose up -d</pre>
     <tr><td>UI metrik kaynağı</td><td><code>KAFKA_CLUSTERS_0_METRICS_TYPE=JMX</code>, <code>KAFKA_CLUSTERS_0_METRICS_PORT=9101</code></td><td>UI'ın JMX'i nereden okuyacağını söylemek için.</td></tr>
     <tr><td>Kalıcı Kafka verisi</td><td>Kafka servisinde volume mount</td><td>Container restart sonrası topic ve mesajların silinmemesi için.</td></tr>
   </table>
+  <h4>En sık değiştirilecek örnekler</h4>
+  <p><b>Şirket Kafka'sına bağlanmak:</b> demo broker yerine gerçek broker adresini yazarsınız.</p>
+  <pre>kafka-ui:
+  environment:
+    KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: broker1.company.local:9092,broker2.company.local:9092</pre>
+  <p><b>Arama bütçesini büyütmek veya küçültmek:</b> büyük topic'lerde sonuçsuz aramanın ne kadar
+  derine ineceğini bu iki değer belirler.</p>
+  <pre>kafka-ui:
+  environment:
+    KAFKA_POLLING_MAXSCANNEDRECORDS: 500000
+    KAFKA_POLLING_RESPONSETIMEOUTMS: 30000</pre>
+  <p><b>Metrics sekmesini çalıştırmak:</b> Kafka broker JMX açar, UI da o porttan okur.</p>
+  <pre>demo-kafka:
+  environment:
+    KAFKA_JMX_PORT: 9101
+    KAFKA_JMX_HOSTNAME: demo-kafka
+
+kafka-ui:
+  environment:
+    KAFKA_CLUSTERS_0_METRICS_TYPE: JMX
+    KAFKA_CLUSTERS_0_METRICS_PORT: 9101</pre>
   <h4>Şirket cluster'ına bağlanmak</h4>
   <ul>
     <li><b>Arayüzden:</b> dinamik konfigürasyon açık olduğu için (<code>DYNAMIC_CONFIG_ENABLED=true</code>)
@@ -385,15 +421,6 @@ docker compose up -d</pre>
     <li>Aynı düzenlemede broker'a <b>kalıcı veri alanı (volume)</b> ekledik; böylece bundan sonra
       yeniden başlatma topic'leri silmez.</li>
   </ul>
-  <pre>demo-kafka:
-  environment:
-    KAFKA_JMX_PORT: 9101
-    KAFKA_JMX_HOSTNAME: demo-kafka
-
-kafka-ui:
-  environment:
-    KAFKA_CLUSTERS_0_METRICS_TYPE: JMX
-    KAFKA_CLUSTERS_0_METRICS_PORT: 9101</pre>
   <p>Artık Metrics sekmesi broker ve JVM metriklerini (istek oranları, kuyruk boyutları, bellek vb.)
   gerçek değerlerle getiriyor ve konsol hatası kalmadı.</p>
   <figure><img src="assets/ss-metrics-fixed.png" alt="Metrics sekmesi çalışıyor">
