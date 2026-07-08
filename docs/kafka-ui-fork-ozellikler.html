@@ -53,7 +53,8 @@
   <h1>Kafka UI: Genel Kullanım ve Eklediğimiz Özellikler</h1>
   <p class="lede">Kafbat UI (açık kaynak, Apache-2.0) tabanlı Kafka arayüzümüz: uygulama ne
   işe yarar, nasıl kullanılır ve fork ile neler ekledik.</p>
-  <p class="stamp">07.07.2026 &nbsp;|&nbsp; 20 milyon mesajlık gerçek test ortamında canlı doğrulandı</p>
+  <p class="stamp">07.07.2026 &nbsp;|&nbsp; 20 milyon mesajlık gerçek test ortamında canlı doğrulandı
+  &nbsp;|&nbsp; 08.07.2026: "Charts" butonu ve örnekleme modları ekran görüntüleri düzeltildi</p>
 
   <h3>Bu doküman</h3>
   <p>Bu doküman teknik rapor gibi değil, ürünü kullanacak birinin hızlıca anlayacağı şekilde
@@ -72,7 +73,7 @@
     <tr><td>4. Sıralama ve tarih aralığı</td><td>Yüklenen mesajlar Offset, Partition ve Timestamp'e
       göre sıralanabiliyor. Since time moduna bitiş tarihi eklendi; iki tarih arası tek adımda
       inceleniyor.</td></tr>
-    <tr><td>5. Grafik butonu</td><td>Topic sayfasındaki tek bir butonla, mesajların içindeki JSON
+    <tr><td>5. Charts butonu</td><td>Topic sayfasındaki tek bir butonla, mesajların içindeki JSON
       alanlarından anında grafik çizen bir araç açılıyor (dağılım, zaman serisi, toplam, ortalama).
       Örnekleme, temsili örnekleme ve tüm veriyi kesin sayma modlarıyla. Piyasadaki ücretsiz
       araçların hiçbirinde bu yok.</td></tr>
@@ -160,7 +161,7 @@
     <div style="color:#898781; font-size:16px;">&rarr;</div>
     <div style="border:1px solid #c3c2b7; border-radius:8px; padding:8px 12px; background:#eef1e9; text-align:center;"><b>Kafka</b><br>broker (asıl veri)</div>
   </div>
-  <p style="font-size:12px; color:#52514e; margin-top:0;">"Grafik" butonu bu zincirin yanında ayrı bir
+  <p style="font-size:12px; color:#52514e; margin-top:0;">"Charts" butonu bu zincirin yanında ayrı bir
   yol açar: Tarayıcı &rarr; nginx (<code>/viz/</code>) &rarr; kafka-viz &rarr; Kafka. Ana araç sade
   kalsın diye grafik işini ayrı bir servis yapar.</p>
 
@@ -263,7 +264,7 @@
   <figure><img src="assets/ss-daterange-active.png" alt="Tarih aralığı aktif">
     <figcaption>Since time + end date: iki tarih arası mesaj inceleme tek filtreyle yapılır.</figcaption></figure>
 
-  <h3 class="break">6. "Grafik" butonu ve kafka-viz</h3>
+  <h3 class="break">6. "Charts" butonu ve kafka-viz</h3>
   <h4>Sorun neydi?</h4>
   <p>Pazar araştırmamızda gördük: ücretsiz Kafka arayüzlerinin hiçbiri mesajların içeriğinden grafik
   üretemiyor. "Bu topic'te hangi event tipi ne kadar var?", "dakikada kaç mesaj akıyor?" gibi sorular
@@ -274,12 +275,13 @@
     <li><b>kafka-viz:</b> Ayrı, hafif bir grafik aracı. Topic'in JSON alanlarını otomatik keşfeder
       (iç içe alanlar dahil, örn. <code>user.city</code>) ve seçilen alan için grafik çizer. Veriyi
       nasıl okuduğu seçilebilir (aşağıdaki örnekleme modları).</li>
-    <li><b>"Grafik" butonu:</b> Kafka UI'da her topic sayfasının sağ üstüne eklendi. Basınca kafka-viz
-      yeni sekmede, o topic seçili olarak açılır. Grafik motoru Kafka UI'ın içine gömülmedi; ana araç
-      sade kaldı, grafik aracı bağımsız gelişebiliyor.</li>
+    <li><b>"Charts" butonu:</b> Kafka UI'da her topic sayfasının sağ üstüne eklendi (ilk eklendiğinde
+      adı "Grafik" idi, sonra Kafbat'ın İngilizce arayüzüne uysun diye "Charts" olarak değiştirildi).
+      Basınca kafka-viz yeni sekmede, o topic seçili olarak açılır. Grafik motoru Kafka UI'ın içine
+      gömülmedi; ana araç sade kaldı, grafik aracı bağımsız gelişebiliyor.</li>
   </ul>
-  <figure><img src="assets/kafbat-grafik-buton.png" alt="Grafik butonu">
-    <figcaption>Topic sayfası: sağ üstte "Produce Message" yanına eklenen "Grafik" butonu (topic: test-20m, 20.000.002 mesaj).</figcaption></figure>
+  <figure><img src="assets/kafbat-grafik-buton.png" alt="Charts butonu">
+    <figcaption>Topic sayfası: sağ üstte "Produce Message" yanına eklenen "Charts" butonu (topic: test-search, 2.000.001 mesaj).</figcaption></figure>
 
   <h4>Örnekleme modları <span class="new">YENİ</span></h4>
   <p>20 milyonluk bir topic'i her açılışta baştan sona okumak yavaş olur. Bunun yerine kafka-viz üç
@@ -298,8 +300,9 @@
   <b>gördüğünüz mesaj / toplam mesaj (yüzde kapsam)</b> ve kullanılan mod yazar; hangi kontrolde ne
   kadar süreceğine dair bir tahmin ipucu da gösterilir.</p>
   <figure><img src="assets/ss-viz-modes.png" alt="kafka-viz modları">
-    <figcaption>kafka-viz: test-20m topic'inde değer dağılımı. Üstte "Sampling" mod seçici; grafik
-    altında "49.998 / 20.000.002 (%0,25), mod: tail" kapsam bilgisi.</figcaption></figure>
+    <figcaption>kafka-viz: test-search topic'inde (2.000.001 mesaj) event_type değer dağılımı. Üstte
+    "Sampling" mod seçici; grafik altında "49.997 / 2.000.001 (%2,5), mod: tail/son" kapsam
+    bilgisi.</figcaption></figure>
 
   <h4>Görünümler</h4>
   <table>
@@ -431,10 +434,10 @@ kafka-ui:
   <h3>Teknik künye</h3>
   <table>
     <tr><td style="width:130px"><b>Taban</b></td><td>Kafbat UI (github.com/kafbat/kafka-ui), Apache-2.0 lisans, upstream commit d0e3a7e üzerine.</td></tr>
-    <tr><td><b>Fork dalı</b></td><td><code>fix/search-polling-budget</code> (arama bütçesi, hedefli arama, tüm topic arama, sıralama, tarih aralığı + Grafik butonu).</td></tr>
+    <tr><td><b>Fork dalı</b></td><td><code>fix/search-polling-budget</code> (arama bütçesi, hedefli arama, tüm topic arama, sıralama, tarih aralığı + Charts butonu).</td></tr>
     <tr><td><b>Grafik aracı</b></td><td>kafka-viz: Python (Flask) + Chart.js, bağımsız küçük servis, salt okur. Modlar: son N / yayılmış / tümü. Yönlendirici (nginx) full tarama için uzun timeout ile ayarlı.</td></tr>
-    <tr><td><b>Test ortamı</b></td><td>test-20m topic'i: 20.000.002 sentetik JSON mesaj, 6 partition, tek broker.</td></tr>
-    <tr><td><b>Doğrulama</b></td><td>Bu dokümandaki tüm ekran görüntüleri 03.07.2026'da çalışan ortamdan alındı.</td></tr>
+    <tr><td><b>Test ortamı</b></td><td>test-20m topic'i: 20.000.002 sentetik JSON mesaj, 6 partition, tek broker (bkz. Özellik 1, 3, 4, 5, 6 ve Ek düzeltme bölümleri). "Charts" butonu ve örnekleme modları ekran görüntüleri (08.07.2026 düzeltmesi) test-20m verisi artık ortamda kalıcı olmadığı için test-search topic'i (2.000.001 mesaj, 6 partition) üzerinden yeniden alındı.</td></tr>
+    <tr><td><b>Doğrulama</b></td><td>Ekran görüntülerinin çoğu 03.07.2026 ile 05.07.2026 arasında çalışan ortamdan alındı (bkz. her ekran görüntüsünün üst bandındaki commit hash ve tarih damgası). "Charts" butonu ve örnekleme modları görüntüleri, önceki hatalı/eski görselleri düzeltmek için 08.07.2026'da yeniden alındı.</td></tr>
   </table>
   <p class="stamp">Sorular için: Kadir (kadiraycareer@gmail.com)</p>
 
